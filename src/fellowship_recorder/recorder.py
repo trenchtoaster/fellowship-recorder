@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .enrichment import MetadataEnricher
 from .mappings import format_difficulty
-from .metadata import Chapter, RecordingMetadata
+from .metadata import RecordingMetadata
 from .parser import CombatLogEvent
 
 logger = logging.getLogger(__name__)
@@ -61,10 +61,6 @@ class RecordingSession(BaseModel):
     )
     format: str = Field(
         default="mp4", description="Video container format (mp4 or mkv)"
-    )
-    chapters: list[Chapter] = Field(
-        default_factory=list,
-        description="Chapter markers for encounters within the recording",
     )
 
     def get_filename(self) -> str:
@@ -246,7 +242,7 @@ class GpuScreenRecorder:
 
             metadata = self._generate_metadata(session)
 
-            if self.add_chapters:
+            if self.add_chapters and metadata.chapters:
                 final_path = self._add_chapters_to_video(session, final_path, metadata)
 
             self._save_metadata(metadata, final_path)
@@ -314,7 +310,8 @@ class GpuScreenRecorder:
             if result.returncode == 0 and temp_output.exists():
                 video_path.unlink()
                 temp_output.rename(video_path)
-                logger.info(f"Added {len(session.chapters)} chapter markers and metadata tags")
+                num_chapters = len(metadata.chapters) if metadata.chapters else 0
+                logger.info(f"Added {num_chapters} chapter markers and metadata tags")
             else:
                 if temp_output.exists():
                     temp_output.unlink()
@@ -333,7 +330,7 @@ class GpuScreenRecorder:
         """Create FFmpeg metadata file with global tags and chapters.
 
         Args:
-            session: Recording session (for backwards compatibility)
+            session: Recording session
             metadata_path: Where to write the metadata file
             metadata: Recording metadata with chapters, affixes, heroes, etc.
         """
@@ -354,7 +351,7 @@ class GpuScreenRecorder:
             if metadata.affixes:
                 interesting_affixes = [
                     a.affix_name for a in metadata.affixes
-                    if a.affix_id not in [4, 6]
+                    if a.affix_type != "Ascension"
                 ]
                 if interesting_affixes:
                     f.write(f"comment={', '.join(interesting_affixes)}\n")
@@ -367,10 +364,10 @@ class GpuScreenRecorder:
 
             if metadata.chapters:
                 for i, chapter in enumerate(metadata.chapters):
-                    start_ms = int(chapter.timestamp * 1000)
+                    start_ms = int(chapter.time_offset * 1000)
 
                     if i + 1 < len(metadata.chapters):
-                        end_ms = int(metadata.chapters[i + 1].timestamp * 1000)
+                        end_ms = int(metadata.chapters[i + 1].time_offset * 1000)
                     else:
                         end_ms = int(metadata.duration * 1000)
 
@@ -430,7 +427,11 @@ class GpuScreenRecorder:
         )
 
         metadata.overrun = self.overrun
-        metadata.chapters = session.chapters if session.chapters else None
+
+        chapters = metadata.generate_chapters()
+        if chapters:
+            metadata.chapters = chapters
+
         return metadata
 
     def _save_metadata(self, metadata: RecordingMetadata, video_path: Path) -> None:
@@ -458,7 +459,7 @@ class GpuScreenRecorder:
             video_path: Path to the video file
         """
         try:
-            from .description import generate_video_description
+            from .cli.generate_description import generate_video_description
 
             description = generate_video_description(metadata)
             txt_path = video_path.with_suffix(".txt")
@@ -540,18 +541,3 @@ class GpuScreenRecorder:
     def is_recording(self) -> bool:
         """Check if currently recording."""
         return self.active_session is not None
-
-    def add_chapter(self, title: str, offset: float = 0.0) -> None:
-        """Add a chapter marker to the current recording.
-
-        Args:
-            title: Chapter title
-            offset: Seconds to offset the chapter backward (default: 0)
-        """
-        if self.active_session is None:
-            return
-
-        timestamp = time.time() - self.active_session.start_time - offset
-        # Ensure timestamp doesn't go negative
-        timestamp = max(0.0, timestamp)
-        self.active_session.chapters.append(Chapter(title=title, timestamp=timestamp))

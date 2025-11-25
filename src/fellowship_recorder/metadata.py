@@ -140,6 +140,48 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
         with path.open("w") as f:
             f.write(self.model_dump_json(indent=2, exclude_none=True))
 
+    def generate_chapters(self) -> list[Chapter]:
+        """Generate chapter markers from encounters and deaths.
+
+        Returns:
+            List of Chapter objects sorted by time offset
+        """
+        chapters = []
+
+        if self.deaths:
+            player_to_hero = {d.player_name: d.hero_name for d in self.deaths if d.hero_name}
+            for death in self.deaths:
+                player_name = death.player_name
+
+                if player_name in player_to_hero:
+                    title = f"Death: {player_to_hero[player_name]}"
+                else:
+                    title = f"Death: {player_name}"
+
+                chapters.append(Chapter(
+                    title=title,
+                    time_offset=death.time_offset,
+                ))
+
+        boss_attempts = defaultdict(int)
+        if self.encounters:
+            for encounter in self.encounters:
+                boss_attempts[encounter.boss_id] += 1
+                attempt_num = boss_attempts[encounter.boss_id]
+
+                if encounter.success:
+                    title = f"{encounter.boss_name} (Kill)"
+                else:
+                    title = f"{encounter.boss_name} (Attempt {attempt_num})"
+
+                chapters.append(Chapter(
+                    title=title,
+                    time_offset=encounter.start_time_offset,
+                ))
+
+        chapters.sort(key=lambda c: c.time_offset)
+        return chapters
+
     @staticmethod
     def from_dungeon(
         dungeon_name: str,

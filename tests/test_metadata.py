@@ -205,3 +205,62 @@ def test_metadata_affixes(tmp_path):
     assert len(data["affixes"]) == 4
     assert data["affixes"][0]["affix_id"] == 6
     assert data["affixes"][0]["affix_name"] == "Asha's Dilemma"
+
+
+def test_generate_chapters():
+    """Test chapter generation from encounters and deaths."""
+    from fellowship_recorder.metadata import Death, Encounter
+
+    metadata = RecordingMetadata.from_dungeon(
+        dungeon_name="Test",
+        dungeon_id=23,
+        difficulty_id=31,
+        duration=600.0,
+        result=True,
+        start_time=datetime.now(),
+    )
+
+    metadata.encounters = [
+        Encounter(boss_id=1, boss_name="Boss 1", start_time_offset=10.0, end_time_offset=50.0, success=False),
+        Encounter(boss_id=1, boss_name="Boss 1", start_time_offset=60.0, end_time_offset=100.0, success=True),
+        Encounter(boss_id=2, boss_name="Boss 2", start_time_offset=120.0, end_time_offset=180.0, success=True),
+    ]
+
+    metadata.deaths = [
+        Death(player_id="P1", player_name="Player1", hero_id=1, hero_name="Barbarian", occurred_at="2025-11-24T08:36:19Z", time_offset=30.0),
+        Death(player_id="P2", player_name="Player2", hero_id=2, occurred_at="2025-11-24T08:36:49Z", time_offset=80.0),
+    ]
+
+    chapters = metadata.generate_chapters()
+
+    assert len(chapters) == 5
+
+    assert chapters[0].title == "Boss 1 (Attempt 1)"
+    assert chapters[0].time_offset == 10.0
+
+    assert chapters[1].title == "Death: Barbarian"
+    assert chapters[1].time_offset == 30.0
+
+    assert chapters[2].title == "Boss 1 (Kill)"
+    assert chapters[2].time_offset == 60.0
+
+    assert chapters[3].title == "Death: Player2"
+    assert chapters[3].time_offset == 80.0
+
+    assert chapters[4].title == "Boss 2 (Kill)"
+    assert chapters[4].time_offset == 120.0
+
+
+def test_generate_chapters_empty():
+    """Test chapter generation with no encounters or deaths."""
+    metadata = RecordingMetadata.from_dungeon(
+        dungeon_name="Test",
+        dungeon_id=23,
+        difficulty_id=31,
+        duration=100.0,
+        result=True,
+        start_time=datetime.now(),
+    )
+
+    chapters = metadata.generate_chapters()
+    assert chapters == []

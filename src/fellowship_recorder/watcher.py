@@ -8,7 +8,7 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from .config import FellowshipRecorderConfig
-from .parser import CombatLogParser, EventType
+from .parser import CombatLogParser
 from .recorder import GpuScreenRecorder
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,6 @@ class CombatLogHandler(FileSystemEventHandler):
         self.last_activity_time = time.time()
         self.startup_time = time.time()
         self.startup_grace_period = 5.0
-        self.last_encounter_chapter: str | None = None
         self.pending_stop_time: float | None = None
         self.pending_end_event = None
 
@@ -109,8 +108,7 @@ class CombatLogHandler(FileSystemEventHandler):
         if time_since_startup < self.startup_grace_period:
             return
 
-        if event.event_type != EventType.UNIT_DEATH:
-            logger.info(f"Detected: {event.event_type.value}")
+        logger.info(f"Detected: {event.event_type.value}")
 
         self.last_activity_time = time.time()
 
@@ -120,42 +118,14 @@ class CombatLogHandler(FileSystemEventHandler):
                 logger.info(f"Metadata: {event.metadata}")
                 self.recorder.start_recording(event)
 
-        elif event.is_end_event:
-            if self.recorder.is_recording():
-                overrun_time = self.config.get_overrun_time()
-                if overrun_time > 0:
-                    self.pending_stop_time = time.time() + overrun_time
-                    self.pending_end_event = event
-                    logger.info(f"Dungeon ended, stopping in {overrun_time}s to capture overrun")
-                else:
-                    self._stop_recording_with_event(event)
-
-        else:
-            self._add_chapter_if_needed(event)
-
-    def _add_chapter_if_needed(self, event) -> None:
-        """Add chapter marker for encounters and deaths.
-
-        Args:
-            event: Combat log event
-        """
-        if not self.recorder.is_recording():
-            return
-
-        if event.event_type == EventType.ENCOUNTER_START and self.config.boss_markers:
-            encounter_name = event.metadata.get("encounter_name", "Boss Fight")
-            if encounter_name != self.last_encounter_chapter:
-                self.recorder.add_chapter(encounter_name)
-                logger.info(f"Added chapter: {encounter_name}")
-                self.last_encounter_chapter = encounter_name
-
-        elif event.event_type == EventType.ENCOUNTER_END:
-            self.last_encounter_chapter = None
-
-        elif event.event_type == EventType.ALLY_DEATH and self.config.death_markers:
-            player_name = event.metadata.get("player_name", "Unknown")
-            self.recorder.add_chapter(f"Death: {player_name}", offset=self.config.death_chapter_offset)
-            logger.info(f"Added chapter: Death: {player_name} (offset: {self.config.death_chapter_offset}s)")
+        elif event.is_end_event and self.recorder.is_recording():
+            overrun_time = self.config.get_overrun_time()
+            if overrun_time > 0:
+                self.pending_stop_time = time.time() + overrun_time
+                self.pending_end_event = event
+                logger.info(f"Dungeon ended, stopping in {overrun_time}s to capture overrun")
+            else:
+                self._stop_recording_with_event(event)
 
     def check_inactivity_timeout(self) -> None:
         """Check if we should stop recording due to inactivity."""
@@ -188,7 +158,6 @@ class CombatLogHandler(FileSystemEventHandler):
 
         self.pending_stop_time = None
         self.pending_end_event = None
-        self.last_encounter_chapter = None
 
 
 class FellowshipRecorderWatcher:
