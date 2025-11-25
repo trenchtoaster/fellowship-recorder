@@ -1,0 +1,13 @@
+[Unit]
+Description=Fellowship Recorder - Automatic Fellowship dungeon recorder
+After=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/fellowship-recorder
+ExecStart=%h/.local/bin/uv run python -m fellowship_recorder
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,44 @@
+[project]
+name = "fellowship-recorder"
+version = "0.1.0"
+description = "Automatic Fellowship activity recorder using gpu-screen-recorder"
+readme = "README.md"
+authors = [{ name = "trench", email = "trenchtoaster@gmail.com" }]
+dependencies = ["watchdog>=6.0.0", "pydantic>=2.0.0"]
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv.pip]
+python = "3.14"
+
+[tool.uv]
+cache-dir = "./.uv_cache"
+
+[dependency-groups]
+dev = ["pytest", "pytest-cov", "ruff", "basedpyright"]
+
+[tool.setuptools]
+package-dir = { "fellowship_recorder" = "src/fellowship_recorder" }
+packages = { find = { where = ["src"], include = ["fellowship_recorder*"] } }
+
+[tool.ruff]
+fix = true
+src = ["src"]
+line-length = 88
+target-version = "py314"
+include = ["pyproject.toml", "src/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "SIM", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
+venv = ".venv"
+venvPath = "."

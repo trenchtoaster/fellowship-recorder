@@ -1,0 +1,70 @@
+# Fellowship Recorder Configuration
+
+[paths]
+# Path to Fellowship combat log directory
+# Default: ~/.local/share/Steam/steamapps/common/Fellowship/fellowship/Saved/CombatLogs
+log_directory = "~/.local/share/Steam/steamapps/common/Fellowship/fellowship/Saved/CombatLogs"
+
+# Where to save recordings
+output_directory = "~/Videos/Fellowship"
+
+[recording]
+# Monitor to record (find yours with: hyprctl monitors, swaymsg -t get_outputs, or xrandr --listmonitors)
+monitor = "DP-1"
+
+# Recording resolution (WxH format)
+# Common values: "1920x1080", "2560x1440", "3840x2160"
+resolution = "3840x2160"
+
+# Recording quality: low, medium, high, very_high, ultra
+quality = "high"
+
+# Frames per second
+fps = 60
+
+# Audio device to capture (or "none" to disable audio)
+# "default" uses your system default audio device
+audio_device = "default"
+
+# Video format: mkv (recommended) or mp4
+# MKV is more robust for live recording and handles interruptions better
+format = "mkv"
+
+# Replay buffer in seconds (optional)
+# If set, uses replay buffer mode instead of continuous recording
+# replay_buffer = 300
+
+[filters]
+# Minimum difficulty level to record (0 = record all)
+min_difficulty = 0
+
+# Record Quick Play mode dungeons (true/false)
+# Quick Play dungeons have no affixes, no timer, and simplified scoring
+# Set to false to only record Challenge/Contender mode dungeons
+record_quick_play = false
+
+[timing]
+# Continue recording for N seconds after dungeon ends
+dungeon_overrun = 5
+
+# Stop recording after N seconds of no combat log activity
+inactivity_timeout = 120
+
+[chapters]
+# Add chapter markers to videos (requires FFmpeg)
+enabled = true
+
+# Add markers for boss encounters
+boss_markers = true
+
+# Add markers for player deaths
+death_markers = true
+
+# Seconds to offset death markers backward (to capture the moment of death)
+death_chapter_offset = 5
+
+[video]
+# Auto-generate video description text file alongside recordings
+# Creates a .txt file with dungeon info, chapters, party, and affixes
+# Useful for uploading to YouTube or other video platforms
+generate_description = false
