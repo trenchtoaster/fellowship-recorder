@@ -7,6 +7,11 @@ authors = [{ name = "trench", email = "trenchtoaster@gmail.com" }]
 dependencies = ["watchdog>=6.0.0", "pydantic>=2.0.0"]
 requires-python = ">=3.12"
 
+[project.scripts]
+fellowship-recorder = "fellowship_recorder.__main__:main"
+parse-log = "fellowship_recorder.cli.parse_log:main"
+generate-description = "fellowship_recorder.cli.generate_description:main"
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"

@@ -94,7 +94,7 @@ def enable_autostart() -> None:
     print("Useful commands:")
     print("  Check status:  systemctl --user status fellowship-recorder.service")
     print("  View logs:     journalctl --user -u fellowship-recorder.service -f")
-    print("  Disable:       uv run python -m fellowship_recorder --disable-autostart")
+    print("  Disable:       uv run fellowship-recorder --disable-autostart")
 
 
 def disable_autostart() -> None:
@@ -134,42 +134,7 @@ def disable_autostart() -> None:
     print(
         "The Fellowship Recorder service will no longer start automatically on login."
     )
-    print("To re-enable: uv run python -m fellowship_recorder --enable-autostart")
-
-
-def generate_description(video_path: Path) -> None:
-    """Generate video description for a recording.
-
-    Args:
-        video_path: Path to the video file
-    """
-    import json
-
-    from .description import generate_video_description
-    from .metadata import RecordingMetadata
-
-    if not video_path.exists():
-        print(f"Error: Video file not found: {video_path}", file=sys.stderr)
-        sys.exit(1)
-
-    json_path = video_path.with_suffix(".json")
-    if not json_path.exists():
-        print(f"Error: Metadata file not found: {json_path}", file=sys.stderr)
-        print("Expected a .json file with the same name as the video.", file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        with json_path.open() as f:
-            data = json.load(f)
-        metadata = RecordingMetadata.model_validate(data)
-    except Exception as e:
-        print(f"Error loading metadata: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    description = generate_video_description(metadata)
-    txt_path = video_path.with_suffix(".txt")
-    txt_path.write_text(description)
-    print(f"Description written to: {txt_path}")
+    print("To re-enable: uv run fellowship-recorder --enable-autostart")
 
 
 def run_recorder() -> None:
@@ -226,12 +191,6 @@ def main() -> None:
         action="store_true",
         help="Disable auto-start of Fellowship Recorder",
     )
-    parser.add_argument(
-        "--describe",
-        type=Path,
-        metavar="VIDEO",
-        help="Generate video description for a specific recording",
-    )
 
     args = parser.parse_args()
 
@@ -239,9 +198,7 @@ def main() -> None:
         print("Error: Cannot use --enable-autostart and --disable-autostart together")
         sys.exit(1)
 
-    if args.describe:
-        generate_description(args.describe)
-    elif args.enable_autostart:
+    if args.enable_autostart:
         enable_autostart()
     elif args.disable_autostart:
         disable_autostart()
