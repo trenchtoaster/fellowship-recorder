@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from .metadata import RecordingMetadata
+from ..metadata import RecordingMetadata
 
 
 def format_timestamp(seconds: float) -> str:
@@ -56,7 +56,7 @@ def generate_video_description(metadata: RecordingMetadata) -> str:
         lines.append("Chapters:")
         lines.append("0:00 Start")
         for chapter in metadata.chapters:
-            timestamp = format_timestamp(chapter.timestamp)
+            timestamp = format_timestamp(chapter.time_offset)
             title = chapter.title
 
             if title.startswith("Death: "):

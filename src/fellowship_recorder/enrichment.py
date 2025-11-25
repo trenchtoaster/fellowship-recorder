@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .mappings import get_hero_name
-from .metadata import Death, Player, RecordingMetadata
+from .metadata import Death, Encounter, Player, RecordingMetadata, to_utc_iso_string
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,10 @@ class MetadataEnricher:
             deaths = self._extract_deaths(log_file, start_time, end_time, players)
             if deaths:
                 metadata.deaths = deaths
+
+            encounters = self._extract_encounters(log_file, start_time, end_time)
+            if encounters:
+                metadata.encounters = encounters
 
         except Exception as e:
             logger.error(f"Error enriching metadata: {e}")
@@ -184,6 +188,7 @@ class MetadataEnricher:
                     hero_name = player.hero_name if player else None
 
                     death_time_offset = (timestamp - start_time).total_seconds()
+                    occurred_at_str = to_utc_iso_string(timestamp)
 
                     deaths.append(
                         Death(
@@ -191,8 +196,8 @@ class MetadataEnricher:
                             player_name=player_name,
                             hero_id=hero_id,
                             hero_name=hero_name,
-                            date=timestamp.isoformat(),
-                            timestamp=death_time_offset,
+                            occurred_at=occurred_at_str,
+                            time_offset=death_time_offset,
                         )
                     )
 
@@ -200,3 +205,94 @@ class MetadataEnricher:
                     continue
 
         return deaths
+
+    def _extract_encounters(
+        self, log_file: Path, start_time: datetime, end_time: datetime
+    ) -> list[Encounter]:
+        """Extract boss encounters from combat log.
+
+        Args:
+            log_file: Path to combat log file
+            start_time: Start of time range
+            end_time: End of time range
+
+        Returns:
+            List of encounters
+        """
+        encounters = []
+        encounter_starts = {}
+
+        with log_file.open("r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                if "ENCOUNTER_START" not in line and "ENCOUNTER_END" not in line:
+                    continue
+
+                try:
+                    parts = line.strip().split("|")
+                    timestamp_str = parts[0]
+                    timestamp = datetime.fromisoformat(timestamp_str)
+
+                    if timestamp < start_time:
+                        continue
+                    if timestamp > end_time:
+                        break
+
+                    event_type = parts[1]
+
+                    if len(parts) < 4:
+                        continue
+
+                    boss_id = int(parts[2])
+                    boss_name = parts[3].strip('[]"')
+
+                    if event_type == "ENCOUNTER_START":
+                        start_offset = (timestamp - start_time).total_seconds()
+                        encounter_starts[boss_id] = {
+                            "boss_name": boss_name,
+                            "start_timestamp": start_offset,
+                            "start_time": timestamp,
+                        }
+
+                    elif event_type == "ENCOUNTER_END":
+                        end_offset = (timestamp - start_time).total_seconds()
+                        success = bool(int(parts[4])) if len(parts) > 4 else None
+
+                        start_data = encounter_starts.get(boss_id)
+                        if start_data:
+                            encounters.append(
+                                Encounter(
+                                    boss_id=boss_id,
+                                    boss_name=boss_name,
+                                    start_time_offset=start_data["start_timestamp"],
+                                    end_time_offset=end_offset,
+                                    success=success,
+                                )
+                            )
+                            del encounter_starts[boss_id]
+                        else:
+                            encounters.append(
+                                Encounter(
+                                    boss_id=boss_id,
+                                    boss_name=boss_name,
+                                    start_time_offset=end_offset,
+                                    end_time_offset=end_offset,
+                                    success=success,
+                                )
+                            )
+
+                except Exception:
+                    continue
+
+        for boss_id, data in encounter_starts.items():
+            encounters.append(
+                Encounter(
+                    boss_id=boss_id,
+                    boss_name=data["boss_name"],
+                    start_time_offset=data["start_timestamp"],
+                    end_time_offset=None,
+                    success=None,
+                )
+            )
+
+        encounters.sort(key=lambda e: e.start_time_offset)
+        return encounters

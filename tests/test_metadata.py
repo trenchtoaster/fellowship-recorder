@@ -32,7 +32,8 @@ def test_dungeon_metadata(tmp_path):
     assert data["duration"] == 605.0
     assert data["result"] is True
     assert "unique_hash" in data
-    assert "start" in data
+    assert "started_at" in data
+    assert "ended_at" in data
 
 
 def test_metadata_unique_hash():
@@ -158,14 +159,14 @@ def test_metadata_deaths():
         player_id="Player-1234",
         player_name="Player1",
         hero_id=1,
-        date="2025-11-24T08:36:19Z",
-        timestamp=60.0,
+        occurred_at="2025-11-24T08:36:19Z",
+        time_offset=60.0,
     )
     metadata.deaths = [death]
 
     assert len(metadata.deaths) == 1
     assert metadata.deaths[0].player_name == "Player1"
-    assert metadata.deaths[0].timestamp == 60.0
+    assert metadata.deaths[0].time_offset == 60.0
 
 
 def test_metadata_affixes(tmp_path):

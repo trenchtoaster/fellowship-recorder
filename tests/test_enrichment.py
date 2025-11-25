@@ -155,12 +155,12 @@ class TestMetadataEnricher:
         assert deaths[0].player_id == "Player-1000"
         assert deaths[0].player_name == "Player1"
         assert deaths[0].hero_id == 5
-        assert deaths[0].timestamp == pytest.approx(221.0)
+        assert deaths[0].time_offset == pytest.approx(221.0)
 
         assert deaths[1].player_id == "Player-2000"
         assert deaths[1].player_name == "Player2"
         assert deaths[1].hero_id == 3
-        assert deaths[1].timestamp == pytest.approx(341.0)
+        assert deaths[1].time_offset == pytest.approx(341.0)
 
     def test_extract_deaths_time_filter(self, enricher, log_directory):
         """Test that death extraction respects time boundaries."""

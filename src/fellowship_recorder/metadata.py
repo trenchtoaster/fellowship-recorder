@@ -1,12 +1,26 @@
 """Metadata generation for Fellowship recordings."""
 
 import hashlib
-from datetime import datetime
+from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from .mappings import format_difficulty, get_affix_info, get_affix_name, get_mode_name
+from .mappings import format_difficulty, get_affix_info, get_mode_name
+
+
+def to_utc_iso_string(dt_obj: datetime) -> str:
+    """Convert datetime to UTC ISO 8601 string with milliseconds and 'Z' suffix.
+
+    Args:
+        dt_obj: Datetime object (naive or timezone-aware)
+
+    Returns:
+        ISO 8601 UTC string with 'Z' suffix (e.g., "2025-11-25T21:50:55.186Z")
+    """
+    dt_obj = dt_obj.astimezone(UTC)
+    return dt_obj.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
 class Affix(BaseModel):
@@ -43,31 +57,39 @@ class Death(BaseModel):
     player_name: str = Field(description="Name of the player who died")
     hero_id: int = Field(description="Hero ID the player was using")
     hero_name: str | None = Field(default=None, description="Hero name")
-    date: str = Field(description="Human-readable date/time of death")
-    timestamp: float = Field(ge=0, description="Seconds since dungeon start")
+    occurred_at: str = Field(description="ISO 8601 UTC timestamp when death occurred")
+    time_offset: float = Field(ge=0, description="Seconds since dungeon start")
+
+
+class Encounter(BaseModel):
+    """A boss encounter during the dungeon."""
+
+    boss_id: int = Field(description="Numeric boss ID from combat log")
+    boss_name: str = Field(description="Name of the boss")
+    start_time_offset: float = Field(ge=0, description="Seconds since dungeon start when encounter began")
+    end_time_offset: float | None = Field(default=None, ge=0, description="Seconds since dungeon start when encounter ended")
+    success: bool | None = Field(default=None, description="Whether the boss was defeated (True) or wiped (False)")
 
 
 class Chapter(BaseModel):
     """A chapter marker in the recording."""
 
     title: str = Field(description="Chapter title")
-    timestamp: float = Field(ge=0, description="Seconds since recording started")
+    time_offset: float = Field(ge=0, description="Seconds since recording started (includes configured offset for context)")
 
 
 class RecordingMetadata(BaseModel, populate_by_name=True):
     """Metadata for a Fellowship recording."""
 
+    started_at: str | None = Field(
+        default=None, description="ISO 8601 UTC timestamp when dungeon started"
+    )
+    ended_at: str | None = Field(
+        default=None, description="ISO 8601 UTC timestamp when dungeon ended"
+    )
     duration: float = Field(ge=0, description="Duration of recording in seconds")
     result: bool = Field(description="Whether the dungeon was completed successfully")
-    party: list[Player] = Field(
-        default_factory=list, description="List of party members"
-    )
-    overrun: int = Field(
-        default=0,
-        ge=0,
-        exclude=True,
-        description="Overrun time in seconds after dungeon end",
-    )
+
     dungeon_id: int | None = Field(default=None, description="Dungeon ID")
     dungeon_name: str | None = Field(
         default=None, description="Human-readable dungeon name"
@@ -87,18 +109,26 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
         default=None,
         description="List of dungeon affixes with IDs and names",
     )
+    party: list[Player] = Field(
+        default_factory=list, description="List of party members"
+    )
+    encounters: list[Encounter] | None = Field(
+        default=None, description="List of boss encounters during run"
+    )
     deaths: list[Death] | None = Field(
         default=None, description="List of player deaths during run"
     )
     chapters: list[Chapter] | None = Field(
         default=None, description="Chapter markers for encounters and events"
     )
-
-    start: int | None = Field(
-        default=None, description="Unix timestamp (milliseconds) when dungeon started"
-    )
     unique_hash: str | None = Field(
         default=None, description="Unique hash identifying this run"
+    )
+    overrun: int = Field(
+        default=0,
+        ge=0,
+        exclude=True,
+        description="Overrun time in seconds after dungeon end",
     )
 
     def to_json(self, path: Path) -> None:
@@ -153,7 +183,13 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
                         )
                     )
 
+        started_at_str = to_utc_iso_string(start_time)
+        end_time = start_time + timedelta(seconds=duration)
+        ended_at_str = to_utc_iso_string(end_time)
+
         return RecordingMetadata(
+            started_at=started_at_str,
+            ended_at=ended_at_str,
             duration=duration,
             result=result,
             dungeon_id=dungeon_id,
@@ -163,6 +199,5 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
             mode_name=get_mode_name(mode_id),
             affixes=affix_list,
             difficulty_name=format_difficulty(difficulty_id, mode_id),
-            start=int(start_time.timestamp() * 1000),
             unique_hash=unique_hash,
         )

@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from fellowship_recorder.description import format_timestamp, generate_video_description
+from fellowship_recorder.cli.generate_description import (
+    format_timestamp,
+    generate_video_description,
+)
 from fellowship_recorder.metadata import Affix, Chapter, Death, Player, RecordingMetadata
 
 
@@ -72,8 +75,8 @@ class TestGenerateVideoDescription:
         )
 
         metadata.chapters = [
-            Chapter(title="Boss Fight", timestamp=60.0),
-            Chapter(title="Final Boss", timestamp=300.0),
+            Chapter(title="Boss Fight", time_offset=60.0),
+            Chapter(title="Final Boss", time_offset=300.0),
         ]
 
         description = generate_video_description(metadata)
@@ -157,7 +160,7 @@ class TestGenerateVideoDescription:
         ]
 
         metadata.chapters = [
-            Chapter(title="Boss Fight", timestamp=60.0),
+            Chapter(title="Boss Fight", time_offset=60.0),
         ]
 
         description = generate_video_description(metadata)
@@ -221,7 +224,7 @@ class TestGenerateVideoDescription:
         )
 
         metadata.chapters = [
-            Chapter(title="Mid Point", timestamp=3600.0),
+            Chapter(title="Mid Point", time_offset=3600.0),
         ]
 
         description = generate_video_description(metadata)
@@ -254,13 +257,13 @@ class TestGenerateVideoDescription:
                 player_name="PlayerName123",
                 hero_id=2,
                 hero_name="Elarion",
-                date="2025-11-25T10:30:00",
-                timestamp=120.0,
+                occurred_at="2025-11-25T10:30:00Z",
+                time_offset=120.0,
             )
         ]
 
         metadata.chapters = [
-            Chapter(title="Death: PlayerName123", timestamp=120.0),
+            Chapter(title="Death: PlayerName123", time_offset=120.0),
         ]
 
         description = generate_video_description(metadata)

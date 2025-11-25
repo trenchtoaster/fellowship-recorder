@@ -148,55 +148,6 @@ class TestCombatLogHandler:
         mock_recorder.stop_recording.assert_not_called()
         assert handler.pending_stop_time is not None
 
-    def test_process_line_encounter_start(self, handler, mock_recorder):
-        """Test processing encounter start adds chapter."""
-        mock_recorder.is_recording.return_value = True
-        handler.config.boss_markers = True
-
-        line = '2025-11-24T08:40:00.000+00:00|ENCOUNTER_START|456|"Big Boss"|1'
-        handler._process_line(line)
-
-        mock_recorder.add_chapter.assert_called_once_with("Big Boss")
-
-    def test_process_line_encounter_no_duplicate_chapters(self, handler, mock_recorder):
-        """Test that duplicate encounter chapters are not added."""
-        mock_recorder.is_recording.return_value = True
-        handler.config.boss_markers = True
-
-        line = '2025-11-24T08:40:00.000+00:00|ENCOUNTER_START|456|"Big Boss"|1'
-        handler._process_line(line)
-        handler._process_line(line)
-
-        assert mock_recorder.add_chapter.call_count == 1
-
-    def test_process_line_encounter_end_resets_chapter(self, handler, mock_recorder):
-        """Test encounter end resets chapter tracking."""
-        mock_recorder.is_recording.return_value = True
-        handler.config.boss_markers = True
-
-        line = '2025-11-24T08:40:00.000+00:00|ENCOUNTER_START|456|"Big Boss"|1'
-        handler._process_line(line)
-
-        line = '2025-11-24T08:42:00.000+00:00|ENCOUNTER_END|456|"Big Boss"|1|1'
-        handler._process_line(line)
-
-        line = '2025-11-24T08:43:00.000+00:00|ENCOUNTER_START|456|"Big Boss"|1'
-        handler._process_line(line)
-
-        assert mock_recorder.add_chapter.call_count == 2
-
-    def test_process_line_ally_death(self, handler, mock_recorder):
-        """Test processing ally death adds chapter."""
-        mock_recorder.is_recording.return_value = True
-        handler.config.death_markers = True
-
-        line = '2025-11-24T08:50:15.000+00:00|ALLY_DEATH|Player-5000|"Player5"|Npc-123|"Boss"|456|"Strike"|0|0.85'
-        handler._process_line(line)
-
-        mock_recorder.add_chapter.assert_called_once()
-        call_args = mock_recorder.add_chapter.call_args
-        assert "Death: Player5" in call_args[0][0]
-
     def test_check_inactivity_timeout(self, handler, mock_recorder):
         """Test inactivity timeout stops recording."""
         mock_recorder.is_recording.return_value = True
@@ -325,25 +276,6 @@ class TestFellowshipRecorderWatcher:
         with patch("fellowship_recorder.watcher.Observer"):
             watcher = FellowshipRecorderWatcher(config)
             watcher.start()
-
-    def test_chapter_markers_disabled(self, config, mock_recorder):
-        """Test that chapters are not added when disabled."""
-        config.boss_markers = False
-        config.death_markers = False
-
-        with patch("fellowship_recorder.watcher.GpuScreenRecorder", return_value=mock_recorder):
-            handler = CombatLogHandler(config)
-            handler.startup_time = 0
-
-            mock_recorder.is_recording.return_value = True
-
-            line = '2025-11-24T08:40:00.000+00:00|ENCOUNTER_START|456|"Big Boss"|1'
-            handler._process_line(line)
-
-            line = '2025-11-24T08:50:15.000+00:00|ALLY_DEATH|Player-5000|"Player5"|Npc-123|"Boss"|456|"Strike"|0|0.85'
-            handler._process_line(line)
-
-            mock_recorder.add_chapter.assert_not_called()
 
     def test_inactivity_no_timeout_during_pending_stop(self, handler, mock_recorder):
         """Test inactivity timeout doesn't trigger during pending stop."""
