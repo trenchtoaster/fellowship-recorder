@@ -44,7 +44,7 @@ See `config.toml.example` for all configuration options.
 ### 3. Run
 
 ```bash
-uv run python -m fellowship_recorder
+uv run fellowship-recorder
 ```
 
 The watcher will:
@@ -55,22 +55,24 @@ The watcher will:
 
 ## CLI Commands
 
-```bash
-# Run the recorder
-uv run python -m fellowship_recorder
+Fellowship Recorder provides three CLI tools:
 
-# Generate YouTube description with chapters
-uv run python -m fellowship_recorder --describe path/to/video.mkv
-# Creates a .txt file with:
-#   - Dungeon name and difficulty
-#   - YouTube-compatible chapter timestamps
-#   - Party composition (hero names)
-#   - Affixes
+```bash
+# Start the recorder
+uv run fellowship-recorder
 
 # Enable/disable autostart on login
-uv run python -m fellowship_recorder --enable-autostart
-uv run python -m fellowship_recorder --disable-autostart
+uv run fellowship-recorder --enable-autostart
+uv run fellowship-recorder --disable-autostart
+
+# Parse combat logs (useful for processing existing logs)
+uv run parse-log CombatLog.txt --list
+
+# Generate video description from metadata
+uv run generate-description video.mkv --output description.txt
 ```
+
+See [CLI Reference](src/fellowship_recorder/cli/REFERENCE.md) for complete documentation.
 
 ## Output Files
 
@@ -135,6 +137,7 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for help with common issues.
 
 ## Documentation
 
+- [CLI Reference](src/fellowship_recorder/cli/REFERENCE.md) - Detailed CLI tools documentation
 - [Game Data Reference](src/fellowship_recorder/mappings/REFERENCE.md) - Difficulty tiers, heroes, and affixes
 - [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
 - [Configuration](config.toml.example) - All configuration options
