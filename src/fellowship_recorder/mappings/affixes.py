@@ -1,5 +1,7 @@
 """Affix mappings for Fellowship dungeons."""
 
+from __future__ import annotations
+
 from typing import TypedDict
 
 
@@ -104,7 +106,7 @@ def get_affix_names(affix_ids: list[int]) -> list[str]:
     Returns:
         List of affix names
     """
-    names = []
+    names: list[str] = []
     for affix_id in affix_ids:
         name = get_affix_name(affix_id)
         if name:

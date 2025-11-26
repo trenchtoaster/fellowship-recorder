@@ -1,5 +1,7 @@
 """Game mode conversion for Fellowship dungeons."""
 
+from __future__ import annotations
+
 
 def get_mode_name(mode: str | int | None) -> str:
     """Convert mode ID to user-friendly name.

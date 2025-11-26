@@ -1,5 +1,7 @@
 """Parse combat log and generate metadata JSON."""
 
+from __future__ import annotations
+
 import argparse
 import sys
 from pathlib import Path
@@ -24,7 +26,7 @@ def parse_combat_log(
     """
     parser = CombatLogParser()
     enricher = MetadataEnricher(log_file.parent)
-    runs = []
+    runs: list[RecordingMetadata] = []
     current_run = None
 
     with log_file.open("r", encoding="utf-8", errors="ignore") as f:

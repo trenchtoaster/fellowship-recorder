@@ -3,6 +3,8 @@
 Converts raw difficulty levels from combat logs to user-friendly tier names.
 """
 
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 

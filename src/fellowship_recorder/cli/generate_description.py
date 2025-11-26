@@ -1,5 +1,7 @@
 """Generate video descriptions from Fellowship recording metadata."""
 
+from __future__ import annotations
+
 import argparse
 import json
 import sys
@@ -37,7 +39,7 @@ def generate_video_description(metadata: RecordingMetadata) -> str:
     Returns:
         Formatted video description
     """
-    lines = []
+    lines: list[str] = []
 
     if metadata.dungeon_name:
         title_parts = [metadata.dungeon_name]
@@ -47,7 +49,7 @@ def generate_video_description(metadata: RecordingMetadata) -> str:
         lines.append("")
 
     if metadata.chapters:
-        player_to_hero = {}
+        player_to_hero: dict[str, str] = {}
         if metadata.deaths:
             for death in metadata.deaths:
                 if death.hero_name:

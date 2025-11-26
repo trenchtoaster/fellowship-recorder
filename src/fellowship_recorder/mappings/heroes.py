@@ -1,7 +1,8 @@
 """Hero mappings for Fellowship."""
 
-HERO_ID_MAP = {
-    0: None,
+from __future__ import annotations
+
+HERO_ID_MAP: dict[int, str] = {
     2: "Elarion",
     7: "Ardeos",
     10: "Tariq",
@@ -14,13 +15,13 @@ HERO_ID_MAP = {
 }
 
 
-def get_hero_name(hero_id: int) -> str | None:
+def get_hero_name(hero_id: int) -> str:
     """Get hero name from hero ID.
 
     Args:
         hero_id: Numeric hero ID from combat log (COMBATANT_INFO event)
 
     Returns:
-        Hero name or None if unknown
+        Hero name or "Unknown" if not mapped
     """
-    return HERO_ID_MAP.get(hero_id)
+    return HERO_ID_MAP.get(hero_id, "Unknown")
