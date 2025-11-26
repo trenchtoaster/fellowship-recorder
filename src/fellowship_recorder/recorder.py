@@ -1,5 +1,7 @@
 """Controller for gpu-screen-recorder."""
 
+from __future__ import annotations
+
 import logging
 import re
 import shutil
@@ -23,6 +25,7 @@ _gpu_screen_recorder_available: bool | None = None
 
 def sanitize_filename(name: str) -> str:
     """Sanitize a string for use in Linux-friendly filenames."""
+    name = name.replace("'", "")
     name = re.sub(r"[^\w\-+.]", "_", name)
     name = re.sub(r"_+", "_", name)
     return name.strip("_")
@@ -100,10 +103,10 @@ class GpuScreenRecorder:
         add_chapters: bool = True,
         boss_markers: bool = True,
         death_markers: bool = True,
-        death_chapter_offset: int = 5,
+        chapter_offset: int = 5,
         overrun: int = 0,
         generate_video_description: bool = False,
-    ):
+    ) -> None:
         """Initialize recorder.
 
         Args:
@@ -119,7 +122,7 @@ class GpuScreenRecorder:
             add_chapters: Whether to add chapter markers to videos
             boss_markers: Whether to add chapter markers for boss encounters
             death_markers: Whether to add chapter markers for player deaths
-            death_chapter_offset: Seconds to offset death markers backward
+            chapter_offset: Seconds to offset chapter markers backward
             overrun: Seconds to keep recording after a dungeon ends
             generate_video_description: Auto-generate video description text file
         """
@@ -135,7 +138,7 @@ class GpuScreenRecorder:
         self.add_chapters = add_chapters
         self.boss_markers = boss_markers
         self.death_markers = death_markers
-        self.death_chapter_offset = death_chapter_offset
+        self.chapter_offset = chapter_offset
         self.overrun = overrun
         self.generate_video_description = generate_video_description
         self.active_session: RecordingSession | None = None
@@ -208,8 +211,11 @@ class GpuScreenRecorder:
     def stop_recording(self, end_event: CombatLogEvent | None = None) -> Path | None:
         """Stop the current recording session.
 
+        Args:
+            end_event: The end event, or None to cancel and discard the recording
+
         Returns:
-            Path to the final recording file, or None if no session active
+            Path to the final recording file, or None if cancelled/no session active
         """
         if self.active_session is None:
             logger.warning("No active recording to stop")
@@ -230,6 +236,11 @@ class GpuScreenRecorder:
 
             if not session.output_file.exists():
                 logger.warning(f"Output file does not exist: {session.output_file}")
+                return None
+
+            if end_event is None:
+                logger.info("Recording cancelled, discarding file")
+                session.output_file.unlink(missing_ok=True)
                 return None
 
             final_name = session.get_filename()
@@ -368,7 +379,13 @@ class GpuScreenRecorder:
             if metadata.difficulty_name:
                 f.write(f"DIFFICULTY={metadata.difficulty_name}\n")
 
-            result_str = "Success" if metadata.result else "Failed"
+            if not metadata.completed:
+                result_str = "Abandoned"
+            elif metadata.success:
+                result_str = "Success"
+            else:
+                result_str = "Failed"
+
             f.write(f"RESULT={result_str}\n")
 
             if metadata.chapters:
@@ -418,13 +435,17 @@ class GpuScreenRecorder:
             else measured_duration
         )
 
+        completed, success = self._parse_result(session)
+
         metadata = RecordingMetadata.from_dungeon(
             dungeon_name=self._get_value("dungeon_name", session) or "Unknown",
             dungeon_id=self._parse_int(self._get_value("dungeon_id", session)),
             difficulty_id=self._parse_int(self._get_value("difficulty_id", session)),
             duration=duration,
-            result=self._parse_success_flag(session),
+            completed=completed,
+            success=success,
             start_time=event.timestamp,
+            end_time=session.end_event.timestamp if session.end_event else None,
             mode_id=self._get_value("mode", session),
             affixes=self._parse_affixes(self._get_value("affixes", session)),
         )
@@ -452,7 +473,7 @@ class GpuScreenRecorder:
         chapters = metadata.generate_chapters(
             boss_markers=self.boss_markers,
             death_markers=self.death_markers,
-            death_chapter_offset=self.death_chapter_offset,
+            chapter_offset=self.chapter_offset,
         )
 
         if chapters:
@@ -521,21 +542,53 @@ class GpuScreenRecorder:
         except (ValueError, json.JSONDecodeError):
             return None
 
-    def _parse_success_flag(self, session: RecordingSession) -> bool:
-        """Return result flag based on the end event metadata."""
+    def _parse_result(self, session: RecordingSession) -> tuple[bool, bool]:
+        """Determine dungeon completion and success based on end event.
+
+        Returns:
+            Tuple of (completed, success):
+            - completed: True if dungeon run finished, False if abandoned
+            - success: True if successful, False if failed
+        """
         end_event = session.end_event
+
+        if self._is_stronghold_zone_change(end_event):
+            return (False, False)
+
         if end_event is None:
-            return True
+            return (True, True)
+
+        if session.start_event and session.start_event.timestamp == end_event.timestamp:
+            return (False, False)
 
         success_flag = end_event.metadata.get("success")
         if success_flag is None:
-            return True
+            return (True, True)
 
-        return success_flag == "1"
+        return (True, success_flag == "1")
+
+    def _is_stronghold_zone_change(self, event: CombatLogEvent | None) -> bool:
+        """Check if event is ZONE_CHANGE to Stronghold (abandoned dungeon)."""
+        if event is None:
+            return False
+        from .parser import EventType
+
+        return (
+            event.event_type == EventType.ZONE_CHANGE
+            and event.metadata.get("dungeon_id") == "17"
+        )
 
     def _get_value(self, key: str, session: RecordingSession) -> str | None:
-        """Get metadata value with preference to the end event."""
-        if session.end_event and key in session.end_event.metadata:
+        """Get metadata value with preference to the end event.
+
+        Skips end_event metadata if it's a ZONE_CHANGE to Stronghold
+        to avoid using wrong dungeon info when a dungeon is abandoned.
+        """
+        if (
+            session.end_event
+            and not self._is_stronghold_zone_change(session.end_event)
+            and key in session.end_event.metadata
+        ):
             return session.end_event.metadata.get(key)
         return session.start_event.metadata.get(key)
 
