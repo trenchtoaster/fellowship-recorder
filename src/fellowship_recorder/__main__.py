@@ -152,8 +152,8 @@ def run_recorder() -> None:
         config = FellowshipRecorderConfig()
 
     print("Configuration:")
-    print(f"  Log Directory:    {config.log_directory}")
-    print(f"  Output Directory: {config.output_directory}")
+    print(f"  Log Directory:    {str(config.log_directory).replace(str(Path.home()), '~')}")
+    print(f"  Output Directory: {str(config.output_directory).replace(str(Path.home()), '~')}")
     print(f"  Monitor:          {config.monitor}")
     print(f"  Resolution:       {config.resolution}")
     print(f"  Quality:          {config.recording_quality}")

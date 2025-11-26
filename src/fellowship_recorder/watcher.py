@@ -123,6 +123,7 @@ class CombatLogHandler(FileSystemEventHandler):
                 self.recorder.is_recording()
                 and event.event_type == EventType.DUNGEON_START
             ):
+                self.recorder.update_session_metadata(event)
                 if not self.config.should_record(event.metadata):
                     logger.info("Dungeon does not meet recording filters, stopping")
                     self._stop_recording_with_event(None)
@@ -132,15 +133,22 @@ class CombatLogHandler(FileSystemEventHandler):
                 self.recorder.start_recording(event)
 
         elif event.is_end_event and self.recorder.is_recording():
-            overrun_time = self.config.get_overrun_time()
-            if overrun_time > 0:
-                self.pending_stop_time = time.time() + overrun_time
-                self.pending_end_event = event
-                logger.info(
-                    f"Dungeon ended, stopping in {overrun_time}s to capture overrun"
-                )
-            else:
+            if (
+                event.event_type == EventType.ZONE_CHANGE
+                and event.metadata.get("dungeon_id") == "17"
+            ):
+                logger.info("Returned to Stronghold, stopping recording")
                 self._stop_recording_with_event(event)
+            else:
+                overrun_time = self.config.get_overrun_time()
+                if overrun_time > 0:
+                    self.pending_stop_time = time.time() + overrun_time
+                    self.pending_end_event = event
+                    logger.info(
+                        f"Dungeon ended, stopping in {overrun_time}s to capture overrun"
+                    )
+                else:
+                    self._stop_recording_with_event(event)
 
     def check_inactivity_timeout(self) -> None:
         """Check if we should stop recording due to inactivity."""
@@ -225,8 +233,8 @@ class FellowshipRecorderWatcher:
             logger.error("Please configure the correct path in config.toml")
             return
 
-        logger.info(f"Watching: {log_dir}")
-        logger.info(f"Output: {self.config.output_directory}")
+        logger.info(f"Watching: {str(log_dir).replace(str(Path.home()), '~')}")
+        logger.info(f"Output: {str(self.config.output_directory).replace(str(Path.home()), '~')}")
         logger.info("Waiting for Fellowship activity...")
 
         self._initialize_file_positions()

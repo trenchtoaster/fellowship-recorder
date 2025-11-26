@@ -73,7 +73,9 @@ class RecordingSession(BaseModel):
         dungeon = sanitize_filename(
             self.start_event.metadata.get("dungeon_name", "Unknown")
         )
-        difficulty_raw = self.start_event.metadata.get("difficulty_id")
+        difficulty_raw = self.start_event.metadata.get(
+            "difficulty_id"
+        ) or self.start_event.metadata.get("instance_type")
         mode = self.start_event.metadata.get("mode")
 
         try:
@@ -277,6 +279,17 @@ class GpuScreenRecorder:
         except Exception as e:
             logger.error(f"Error stopping recording: {e}")
             return session.output_file
+
+    def update_session_metadata(self, event: CombatLogEvent) -> None:
+        """Update the active session's start event metadata.
+
+        Args:
+            event: Event with additional metadata to merge
+        """
+        if self.active_session is None:
+            return
+
+        self.active_session.start_event.metadata.update(event.metadata)
 
     def _add_chapters_to_video(
         self, session: RecordingSession, video_path: Path, metadata: RecordingMetadata
