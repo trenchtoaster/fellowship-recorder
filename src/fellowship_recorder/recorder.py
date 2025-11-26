@@ -399,7 +399,7 @@ class GpuScreenRecorder:
             raw_duration = session.end_event.metadata.get("duration")
             if raw_duration:
                 try:
-                    log_duration = float(raw_duration)
+                    log_duration = float(raw_duration) / 1000.0
                 except ValueError:
                     log_duration = None
 

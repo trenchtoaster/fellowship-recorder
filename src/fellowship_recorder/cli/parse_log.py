@@ -41,7 +41,7 @@ def parse_combat_log(log_file: Path, output_file: Path | None = None) -> list[Re
                 end_time = event.timestamp
 
                 duration_str = end_event.metadata.get("duration")
-                duration = float(duration_str) if duration_str else (end_time - current_run["start_time"]).total_seconds()
+                duration = float(duration_str) / 1000.0 if duration_str else (end_time - current_run["start_time"]).total_seconds()
 
                 success_str = end_event.metadata.get("success", "0")
                 result = bool(int(success_str))
@@ -143,11 +143,10 @@ def main() -> None:
             result_str = "✓ Success" if metadata.result else "✗ Failed"
             print(f"{i}. {metadata.dungeon_name} ({metadata.difficulty_name}) - {result_str}")
             print(f"   Started: {metadata.started_at}")
+            print(f"   Ended: {metadata.ended_at}")
             print(f"   Duration: {metadata.duration:.1f}s")
-            if metadata.encounters:
-                print(f"   Bosses: {len(metadata.encounters)}")
-            if metadata.deaths:
-                print(f"   Deaths: {len(metadata.deaths)}")
+            print(f"   Bosses: {len(metadata.encounters) if metadata.encounters else 0}")
+            print(f"   Deaths: {len(metadata.deaths) if metadata.deaths else 0}")
             print()
 
 

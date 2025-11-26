@@ -155,13 +155,11 @@ class CombatLogParser:
             if len(params) >= 4:
                 metadata["affixes"] = params[3]
             if len(params) >= 5:
-                metadata["success"] = params[4]
-            if len(params) >= 7:
-                metadata["duration"] = params[6]
+                metadata["mode"] = params[4]
+            if len(params) >= 6:
+                metadata["duration"] = params[5]
             if len(params) >= 8:
-                metadata["completion_flag"] = params[7]
-            if len(params) >= 9:
-                metadata["mode"] = params[8]
+                metadata["success"] = params[7]
 
         elif event_type == EventType.UNIT_DEATH:
             if len(params) >= 1:
