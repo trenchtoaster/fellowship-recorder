@@ -108,7 +108,8 @@ class CombatLogHandler(FileSystemEventHandler):
         if time_since_startup < self.startup_grace_period:
             return
 
-        logger.info(f"Detected: {event.event_type.value}")
+        if event.event_type.value != "UNIT_DEATH":
+            logger.info(f"Detected: {event.event_type.value}")
 
         self.last_activity_time = time.time()
 
