@@ -1,5 +1,7 @@
 """Combat log parser for detecting Fellowship activities."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 
@@ -35,13 +37,37 @@ class CombatLogEvent(BaseModel):
 
     @property
     def is_start_event(self) -> bool:
-        """Check if this is a start event."""
-        return self.event_type == EventType.DUNGEON_START
+        """Check if this is a start event.
+
+        Returns True for:
+        - DUNGEON_START events
+        - ZONE_CHANGE events where dungeon_id != 17 (leaving Stronghold to enter dungeon)
+        """
+        if self.event_type == EventType.DUNGEON_START:
+            return True
+
+        if self.event_type == EventType.ZONE_CHANGE:
+            dungeon_id = self.metadata.get("dungeon_id")
+            return dungeon_id is not None and dungeon_id != "17"
+
+        return False
 
     @property
     def is_end_event(self) -> bool:
-        """Check if this is an end event."""
-        return self.event_type == EventType.DUNGEON_END
+        """Check if this is an end event.
+
+        Returns True for:
+        - DUNGEON_END events
+        - ZONE_CHANGE events where dungeon_id == 17 (returning to Stronghold)
+        """
+        if self.event_type == EventType.DUNGEON_END:
+            return True
+
+        if self.event_type == EventType.ZONE_CHANGE:
+            dungeon_id = self.metadata.get("dungeon_id")
+            return dungeon_id == "17"
+
+        return False
 
 
 class CombatLogParser:
@@ -162,8 +188,10 @@ class CombatLogParser:
                 metadata["success"] = params[7]
 
         elif event_type == EventType.UNIT_DEATH:
-            if len(params) >= 1:
-                metadata["unit_name"] = params[0].strip('"')
+            if len(params) >= 2:
+                metadata["unit_name"] = params[1].strip('"')
+            if len(params) >= 8:
+                metadata["kill_score"] = params[7]
 
         elif event_type == EventType.ALLY_DEATH:
             if len(params) >= 2:
