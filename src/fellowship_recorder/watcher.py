@@ -36,6 +36,9 @@ class CombatLogHandler(FileSystemEventHandler):
             resolution=config.resolution,
             monitor=config.monitor,
             add_chapters=config.add_chapter_markers,
+            boss_markers=config.boss_markers,
+            death_markers=config.death_markers,
+            death_chapter_offset=config.death_chapter_offset,
             overrun=config.get_overrun_time(),
             generate_video_description=config.generate_video_description,
         )
@@ -124,7 +127,9 @@ class CombatLogHandler(FileSystemEventHandler):
             if overrun_time > 0:
                 self.pending_stop_time = time.time() + overrun_time
                 self.pending_end_event = event
-                logger.info(f"Dungeon ended, stopping in {overrun_time}s to capture overrun")
+                logger.info(
+                    f"Dungeon ended, stopping in {overrun_time}s to capture overrun"
+                )
             else:
                 self._stop_recording_with_event(event)
 
@@ -139,7 +144,9 @@ class CombatLogHandler(FileSystemEventHandler):
         time_since_activity = time.time() - self.last_activity_time
 
         if time_since_activity > self.config.inactivity_timeout:
-            logger.info(f"No activity for {self.config.inactivity_timeout}s, stopping recording")
+            logger.info(
+                f"No activity for {self.config.inactivity_timeout}s, stopping recording"
+            )
             self._stop_recording_with_event(None)
 
     def check_pending_stop(self) -> None:
@@ -192,7 +199,9 @@ class FellowshipRecorderWatcher:
                     logger.warning(f"Could not initialize position for {log_file}: {e}")
 
         if initialized_count > 0:
-            logger.info(f"Initialized {initialized_count} existing log file(s) to skip old events")
+            logger.info(
+                f"Initialized {initialized_count} existing log file(s) to skip old events"
+            )
 
     def start(self) -> None:
         """Start watching the combat log directory."""

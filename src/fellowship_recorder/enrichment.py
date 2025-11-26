@@ -146,7 +146,11 @@ class MetadataEnricher:
         return list(players.values())
 
     def _extract_deaths(
-        self, log_file: Path, start_time: datetime, end_time: datetime, players: list[Player]
+        self,
+        log_file: Path,
+        start_time: datetime,
+        end_time: datetime,
+        players: list[Player],
     ) -> list[Death]:
         """Extract player deaths from combat log.
 

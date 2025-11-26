@@ -162,7 +162,9 @@ class FellowshipRecorderConfig(BaseModel):
 
             if "video" in data:
                 vid = data["video"]
-                flat_config["generate_video_description"] = vid.get("generate_description")
+                flat_config["generate_video_description"] = vid.get(
+                    "generate_description"
+                )
 
             config_dict = {k: v for k, v in flat_config.items() if v is not None}
             return cls(**config_dict)

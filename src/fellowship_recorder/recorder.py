@@ -98,6 +98,9 @@ class GpuScreenRecorder:
         resolution: str = "3840x2160",
         monitor: str = "DP-1",
         add_chapters: bool = True,
+        boss_markers: bool = True,
+        death_markers: bool = True,
+        death_chapter_offset: int = 5,
         overrun: int = 0,
         generate_video_description: bool = False,
     ):
@@ -114,6 +117,9 @@ class GpuScreenRecorder:
             resolution: Recording resolution in WxH format
             monitor: Monitor to record ("DP-1", "HDMI-0", etc.)
             add_chapters: Whether to add chapter markers to videos
+            boss_markers: Whether to add chapter markers for boss encounters
+            death_markers: Whether to add chapter markers for player deaths
+            death_chapter_offset: Seconds to offset death markers backward
             overrun: Seconds to keep recording after a dungeon ends
             generate_video_description: Auto-generate video description text file
         """
@@ -127,6 +133,9 @@ class GpuScreenRecorder:
         self.resolution = resolution
         self.monitor = monitor
         self.add_chapters = add_chapters
+        self.boss_markers = boss_markers
+        self.death_markers = death_markers
+        self.death_chapter_offset = death_chapter_offset
         self.overrun = overrun
         self.generate_video_description = generate_video_description
         self.active_session: RecordingSession | None = None
@@ -215,16 +224,12 @@ class GpuScreenRecorder:
             stdout, stderr = session.process.communicate(timeout=10)
 
             if session.process.returncode != 0:
-                logger.error(
-                    f"Process exited with code {session.process.returncode}"
-                )
+                logger.error(f"Process exited with code {session.process.returncode}")
                 if stderr:
                     logger.error(f"stderr: {stderr.decode()}")
 
             if not session.output_file.exists():
-                logger.warning(
-                    f"Output file does not exist: {session.output_file}"
-                )
+                logger.warning(f"Output file does not exist: {session.output_file}")
                 return None
 
             final_name = session.get_filename()
@@ -325,7 +330,10 @@ class GpuScreenRecorder:
         return video_path
 
     def _create_ffmpeg_metadata(
-        self, session: RecordingSession, metadata_path: Path, metadata: RecordingMetadata
+        self,
+        session: RecordingSession,
+        metadata_path: Path,
+        metadata: RecordingMetadata,
     ) -> None:
         """Create FFmpeg metadata file with global tags and chapters.
 
@@ -350,7 +358,8 @@ class GpuScreenRecorder:
 
             if metadata.affixes:
                 interesting_affixes = [
-                    a.affix_name for a in metadata.affixes
+                    a.affix_name
+                    for a in metadata.affixes
                     if a.affix_type != "Ascension"
                 ]
                 if interesting_affixes:
@@ -428,9 +437,32 @@ class GpuScreenRecorder:
 
         metadata.overrun = self.overrun
 
-        chapters = metadata.generate_chapters()
+        recording_start_offset = session.start_time - event.timestamp.timestamp()
+
+        if recording_start_offset < 0:
+            logger.warning(
+                f"Recording started before DUNGEON_START event (offset: {recording_start_offset:.2f}s), using 0"
+            )
+            recording_start_offset = 0
+        elif recording_start_offset > 30:
+            logger.warning(
+                f"Unusually large recording delay: {recording_start_offset:.2f}s"
+            )
+
+        chapters = metadata.generate_chapters(
+            boss_markers=self.boss_markers,
+            death_markers=self.death_markers,
+            death_chapter_offset=self.death_chapter_offset,
+        )
+
         if chapters:
-            metadata.chapters = chapters
+            adjusted_chapters = []
+            for chapter in chapters:
+                adjusted_time = chapter.time_offset - recording_start_offset
+                if adjusted_time > 0:
+                    chapter.time_offset = adjusted_time
+                    adjusted_chapters.append(chapter)
+            metadata.chapters = adjusted_chapters if adjusted_chapters else None
 
         return metadata
 

@@ -15,6 +15,14 @@ Automatically record your Fellowship dungeon runs with automatic detection, chap
 
 ### 1. Install
 
+**Latest release (recommended):**
+```bash
+git clone --branch v0.2.0 https://github.com/trenchtoaster/fellowship-recorder.git
+cd fellowship-recorder
+./setup.sh
+```
+
+**Development version:**
 ```bash
 git clone https://github.com/trenchtoaster/fellowship-recorder.git
 cd fellowship-recorder

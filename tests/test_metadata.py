@@ -184,7 +184,6 @@ def test_metadata_affixes(tmp_path):
     assert metadata.affixes is not None
     assert len(metadata.affixes) == 4
 
-    # Check that affixes are in the correct format
     assert metadata.affixes[0].affix_id == 6
     assert metadata.affixes[0].affix_name == "Asha's Dilemma"
     assert metadata.affixes[1].affix_id == 4
@@ -194,7 +193,6 @@ def test_metadata_affixes(tmp_path):
     assert metadata.affixes[3].affix_id == 19
     assert metadata.affixes[3].affix_name == "Shadow Lord's Trial"
 
-    # Test JSON serialization
     json_path = tmp_path / "test_affixes.json"
     metadata.to_json(json_path)
 
@@ -227,7 +225,7 @@ def test_generate_chapters():
     ]
 
     metadata.deaths = [
-        Death(player_id="P1", player_name="Player1", hero_id=1, hero_name="Barbarian", occurred_at="2025-11-24T08:36:19Z", time_offset=30.0),
+        Death(player_id="P1", player_name="Player1", hero_id=1, hero_name="Rime", occurred_at="2025-11-24T08:36:19Z", time_offset=30.0),
         Death(player_id="P2", player_name="Player2", hero_id=2, occurred_at="2025-11-24T08:36:49Z", time_offset=80.0),
     ]
 
@@ -238,14 +236,14 @@ def test_generate_chapters():
     assert chapters[0].title == "Boss 1 (Attempt 1)"
     assert chapters[0].time_offset == 10.0
 
-    assert chapters[1].title == "Death: Barbarian"
-    assert chapters[1].time_offset == 30.0
+    assert chapters[1].title == "Death: Rime"
+    assert chapters[1].time_offset == 25.0
 
     assert chapters[2].title == "Boss 1 (Kill)"
     assert chapters[2].time_offset == 60.0
 
     assert chapters[3].title == "Death: Player2"
-    assert chapters[3].time_offset == 80.0
+    assert chapters[3].time_offset == 75.0
 
     assert chapters[4].title == "Boss 2 (Kill)"
     assert chapters[4].time_offset == 120.0

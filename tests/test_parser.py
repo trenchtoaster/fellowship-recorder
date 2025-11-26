@@ -74,9 +74,9 @@ def test_parse_dungeon_end(parser):
     assert event.metadata["dungeon_id"] == "23"
     assert event.metadata["difficulty_id"] == "31"
     assert event.metadata["affixes"] == "[6,4]"
+    assert event.metadata["mode"] == "1"
+    assert event.metadata["duration"] == "972907"
     assert event.metadata["success"] == "1"
-    assert event.metadata["duration"] == "605.000000"
-    assert event.metadata["mode"] == "0"
 
 
 def test_parse_player_death(parser):

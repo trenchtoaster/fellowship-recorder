@@ -20,7 +20,7 @@ def to_utc_iso_string(dt_obj: datetime) -> str:
         ISO 8601 UTC string with 'Z' suffix (e.g., "2025-11-25T21:50:55.186Z")
     """
     dt_obj = dt_obj.astimezone(UTC)
-    return dt_obj.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+    return dt_obj.isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 class Affix(BaseModel):
@@ -34,16 +34,12 @@ class Affix(BaseModel):
 class Player(BaseModel, populate_by_name=True):
     """Player in the dungeon."""
 
-    player_id: str = Field(
-        description="Unique player identifier"
-    )
+    player_id: str = Field(description="Unique player identifier")
     player_name: str = Field(description="Player character name")
     hero_id: int = Field(
         description="Numeric hero ID from combat log (from COMBATANT_INFO event)"
     )
-    hero_name: str | None = Field(
-        default=None, description="Hero name"
-    )
+    hero_name: str | None = Field(default=None, description="Hero name")
     is_recording_player: bool = Field(
         default=False, description="True if this is the player recording"
     )
@@ -66,16 +62,28 @@ class Encounter(BaseModel):
 
     boss_id: int = Field(description="Numeric boss ID from combat log")
     boss_name: str = Field(description="Name of the boss")
-    start_time_offset: float = Field(ge=0, description="Seconds since dungeon start when encounter began")
-    end_time_offset: float | None = Field(default=None, ge=0, description="Seconds since dungeon start when encounter ended")
-    success: bool | None = Field(default=None, description="Whether the boss was defeated (True) or wiped (False)")
+    start_time_offset: float = Field(
+        ge=0, description="Seconds since dungeon start when encounter began"
+    )
+    end_time_offset: float | None = Field(
+        default=None,
+        ge=0,
+        description="Seconds since dungeon start when encounter ended",
+    )
+    success: bool | None = Field(
+        default=None,
+        description="Whether the boss was defeated (True) or wiped (False)",
+    )
 
 
 class Chapter(BaseModel):
     """A chapter marker in the recording."""
 
     title: str = Field(description="Chapter title")
-    time_offset: float = Field(ge=0, description="Seconds since recording started (includes configured offset for context)")
+    time_offset: float = Field(
+        ge=0,
+        description="Seconds since recording started (includes configured offset for context)",
+    )
 
 
 class RecordingMetadata(BaseModel, populate_by_name=True):
@@ -94,7 +102,9 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
     dungeon_name: str | None = Field(
         default=None, description="Human-readable dungeon name"
     )
-    difficulty_id: int | None = Field(default=None, ge=0, description="Difficulty level")
+    difficulty_id: int | None = Field(
+        default=None, ge=0, description="Difficulty level"
+    )
     difficulty_name: str | None = Field(
         default=None,
         description="User-friendly difficulty ('Eternal 45', 'Paragon 7', 'Quick Play', etc.)",
@@ -140,16 +150,28 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
         with path.open("w") as f:
             f.write(self.model_dump_json(indent=2, exclude_none=True))
 
-    def generate_chapters(self) -> list[Chapter]:
+    def generate_chapters(
+        self,
+        boss_markers: bool = True,
+        death_markers: bool = True,
+        death_chapter_offset: int = 5,
+    ) -> list[Chapter]:
         """Generate chapter markers from encounters and deaths.
+
+        Args:
+            boss_markers: Whether to include boss encounter markers
+            death_markers: Whether to include death markers
+            death_chapter_offset: Seconds to offset death markers backward
 
         Returns:
             List of Chapter objects sorted by time offset
         """
         chapters = []
 
-        if self.deaths:
-            player_to_hero = {d.player_name: d.hero_name for d in self.deaths if d.hero_name}
+        if death_markers and self.deaths:
+            player_to_hero = {
+                d.player_name: d.hero_name for d in self.deaths if d.hero_name
+            }
             for death in self.deaths:
                 player_name = death.player_name
 
@@ -158,13 +180,16 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
                 else:
                     title = f"Death: {player_name}"
 
-                chapters.append(Chapter(
-                    title=title,
-                    time_offset=death.time_offset,
-                ))
+                time_offset = max(0, death.time_offset - death_chapter_offset)
+                chapters.append(
+                    Chapter(
+                        title=title,
+                        time_offset=time_offset,
+                    )
+                )
 
         boss_attempts = defaultdict(int)
-        if self.encounters:
+        if boss_markers and self.encounters:
             for encounter in self.encounters:
                 boss_attempts[encounter.boss_id] += 1
                 attempt_num = boss_attempts[encounter.boss_id]
@@ -174,10 +199,12 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
                 else:
                     title = f"{encounter.boss_name} (Attempt {attempt_num})"
 
-                chapters.append(Chapter(
-                    title=title,
-                    time_offset=encounter.start_time_offset,
-                ))
+                chapters.append(
+                    Chapter(
+                        title=title,
+                        time_offset=encounter.start_time_offset,
+                    )
+                )
 
         chapters.sort(key=lambda c: c.time_offset)
         return chapters
