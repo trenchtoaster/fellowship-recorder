@@ -22,9 +22,10 @@ quality = "high"
 # Frames per second
 fps = 60
 
-# Audio device to capture (or "none" to disable audio)
-# "default" uses your system default audio device
-audio_device = "default"
+# Audio device to capture
+# Common values: "default_output", "default_input", or null to disable audio
+# To list available devices: gpu-screen-recorder --list-audio-devices
+audio_device = "default_output"
 
 # Video format: mkv (recommended) or mp4
 # MKV is more robust for live recording and handles interruptions better
