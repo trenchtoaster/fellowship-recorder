@@ -233,6 +233,46 @@ class TestCombatLogHandler:
 
         mock_recorder.start_recording.assert_not_called()
 
+    def test_zone_change_starts_recording(self, handler, mock_recorder):
+        """Test that ZONE_CHANGE leaving Stronghold starts recording."""
+        mock_recorder.is_recording.return_value = False
+
+        line = '2025-11-26T10:26:58.573+08:00|ZONE_CHANGE|"Ransack of Drakheim"|23|31|'
+        handler._process_line(line)
+
+        mock_recorder.start_recording.assert_called_once()
+
+    def test_zone_change_entering_stronghold_stops_recording(self, handler, mock_recorder):
+        """Test that ZONE_CHANGE entering Stronghold stops recording."""
+        mock_recorder.is_recording.return_value = True
+        handler.config.dungeon_overrun = 0
+
+        line = '2025-11-26T10:39:31.381+08:00|ZONE_CHANGE|"The Stronghold"|17|1|'
+        handler._process_line(line)
+
+        mock_recorder.stop_recording.assert_called_once()
+
+    def test_dungeon_start_validates_filters_when_already_recording(self, handler, mock_recorder):
+        """Test that DUNGEON_START validates filters when already recording from ZONE_CHANGE."""
+        mock_recorder.is_recording.return_value = True
+        handler.config.min_difficulty = 50
+
+        with patch.object(handler.parser, 'parse_line') as mock_parse:
+            from fellowship_recorder.parser import CombatLogEvent, EventType
+            from datetime import datetime, timezone
+
+            mock_event = CombatLogEvent(
+                timestamp=datetime.now(timezone.utc),
+                event_type=EventType.DUNGEON_START,
+                raw_line="test",
+                metadata={"difficulty": "30"},
+            )
+            mock_parse.return_value = mock_event
+
+            handler._process_line("test line")
+
+        mock_recorder.stop_recording.assert_called_once()
+
 
 class TestFellowshipRecorderWatcher:
     """Test FellowshipRecorderWatcher."""

@@ -143,8 +143,8 @@ def test_recording_start_offset_adjusts_chapters(tmp_path):
     """Test that chapters are adjusted for recording start delay.
 
     Scenario: Recording starts 10s after DUNGEON_START event is logged
-    - Death at 50s (log time) - 5s (death_chapter_offset) - 10s (recording delay) = 35s (video time)
-    - Boss at 60s (log time) - 10s (recording delay) = 50s (video time)
+    - Death at 50s (log time) - 5s (chapter_offset) - 10s (recording delay) = 35s (video time)
+    - Boss start at 60s (log time) - 5s (chapter_offset) - 10s (recording delay) = 45s (video time)
     """
     start_event = CombatLogEvent(
         timestamp=datetime(2025, 11, 26, 11, 3, 37),
@@ -164,7 +164,7 @@ def test_recording_start_offset_adjusts_chapters(tmp_path):
         recorder = GpuScreenRecorder(
             output_dir=tmp_path,
             log_directory=tmp_path,
-            death_chapter_offset=5,
+            chapter_offset=5,
         )
 
         session = RecordingSession(
@@ -208,14 +208,14 @@ def test_recording_start_offset_adjusts_chapters(tmp_path):
     assert metadata.chapters[0].title == "Death: Hero"
     assert metadata.chapters[0].time_offset == 35.0
     assert metadata.chapters[1].title == "Boss (Kill)"
-    assert metadata.chapters[1].time_offset == 50.0
+    assert metadata.chapters[1].time_offset == 45.0
 
 
 def test_recording_start_offset_skips_negative_chapters(tmp_path):
     """Test that chapters at ≤0 seconds are skipped.
 
     Scenario: Death happens very early, resulting in negative chapter time
-    - Death at 3s (log time) - 5s (death_chapter_offset) - 10s (recording delay) = -12s
+    - Death at 3s (log time) - 5s (chapter_offset) - 10s (recording delay) = -12s
     - Chapter with negative time should be skipped entirely
     """
     start_event = CombatLogEvent(
@@ -229,7 +229,7 @@ def test_recording_start_offset_skips_negative_chapters(tmp_path):
         recorder = GpuScreenRecorder(
             output_dir=tmp_path,
             log_directory=tmp_path,
-            death_chapter_offset=5,
+            chapter_offset=5,
         )
 
         session = RecordingSession(
@@ -259,3 +259,249 @@ def test_recording_start_offset_skips_negative_chapters(tmp_path):
             metadata = recorder._generate_metadata(session)
 
     assert metadata.chapters is None or len(metadata.chapters) == 0
+
+
+def test_abandoned_dungeon_metadata(tmp_path):
+    """Test that completed=False when end_event is ZONE_CHANGE to Stronghold."""
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 26, 58),
+        event_type=EventType.ZONE_CHANGE,
+        raw_line='2025-11-26T10:26:58.573+08:00|ZONE_CHANGE|"Ransack of Drakheim"|23|31|',
+        metadata={"dungeon_name": "Ransack of Drakheim", "dungeon_id": "23"},
+    )
+
+    end_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 27, 21),
+        event_type=EventType.ZONE_CHANGE,
+        raw_line='2025-11-26T10:27:21.385+08:00|ZONE_CHANGE|"The Stronghold"|17|1|',
+        metadata={"dungeon_name": "The Stronghold", "dungeon_id": "17"},
+    )
+
+    with patch("fellowship_recorder.recorder.is_gpu_screen_recorder_available", return_value=True):
+        recorder = GpuScreenRecorder(
+            output_dir=tmp_path,
+            log_directory=tmp_path,
+        )
+
+        session = RecordingSession(
+            start_event=start_event,
+            end_event=end_event,
+            process=MagicMock(),
+            output_file=tmp_path / "test.mkv",
+            start_time=start_event.timestamp.timestamp(),
+        )
+
+        with patch.object(recorder.enricher, "enrich_metadata", side_effect=lambda m, s, e: m):
+            metadata = recorder._generate_metadata(session)
+
+    assert metadata.completed is False
+    assert metadata.success is False
+    assert metadata.dungeon_name == "Ransack of Drakheim"
+    assert metadata.dungeon_id == 23
+
+
+def test_completed_dungeon_metadata(tmp_path):
+    """Test that completed=True when end_event is DUNGEON_END."""
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 28, 3),
+        event_type=EventType.ZONE_CHANGE,
+        raw_line='test',
+        metadata={"dungeon_name": "Silken Hollow", "dungeon_id": "24"},
+    )
+
+    end_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 39, 14),
+        event_type=EventType.DUNGEON_END,
+        raw_line='test',
+        metadata={"dungeon_name": "Silken Hollow", "dungeon_id": "24", "difficulty_id": "38", "success": "1"},
+    )
+
+    with patch("fellowship_recorder.recorder.is_gpu_screen_recorder_available", return_value=True):
+        recorder = GpuScreenRecorder(
+            output_dir=tmp_path,
+            log_directory=tmp_path,
+        )
+
+        session = RecordingSession(
+            start_event=start_event,
+            end_event=end_event,
+            process=MagicMock(),
+            output_file=tmp_path / "test.mkv",
+            start_time=start_event.timestamp.timestamp(),
+        )
+
+        with patch.object(recorder.enricher, "enrich_metadata", side_effect=lambda m, s, e: m):
+            metadata = recorder._generate_metadata(session)
+
+    assert metadata.completed is True
+    assert metadata.success is True
+    assert metadata.dungeon_name == "Silken Hollow"
+    assert metadata.dungeon_id == 24
+
+
+def test_lobby_abandonment_short_duration(tmp_path):
+    """Test that completed=False when DUNGEON_END has duration < 10s (lobby abandonment)."""
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 27, 2, 545000),
+        event_type=EventType.DUNGEON_START,
+        raw_line='test',
+        metadata={"dungeon_name": "Ransack of Drakheim", "dungeon_id": "23", "difficulty_id": "31"},
+    )
+
+    end_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 27, 2, 545000),
+        event_type=EventType.DUNGEON_END,
+        raw_line='test',
+        metadata={
+            "dungeon_name": "Ransack of Drakheim",
+            "dungeon_id": "23",
+            "difficulty_id": "31",
+            "duration": "1886",
+            "success": "0",
+        },
+    )
+
+    with patch("fellowship_recorder.recorder.is_gpu_screen_recorder_available", return_value=True):
+        recorder = GpuScreenRecorder(
+            output_dir=tmp_path,
+            log_directory=tmp_path,
+        )
+
+        session = RecordingSession(
+            start_event=start_event,
+            end_event=end_event,
+            process=MagicMock(),
+            output_file=tmp_path / "test.mkv",
+            start_time=start_event.timestamp.timestamp(),
+        )
+
+        with patch.object(recorder.enricher, "enrich_metadata", side_effect=lambda m, s, e: m):
+            metadata = recorder._generate_metadata(session)
+
+    assert metadata.completed is False
+    assert metadata.success is False
+    assert metadata.dungeon_name == "Ransack of Drakheim"
+    assert metadata.dungeon_id == 23
+
+
+def test_ffmpeg_metadata_result_abandoned(tmp_path):
+    """Test that FFmpeg metadata writes RESULT=Abandoned when completed=False."""
+    from fellowship_recorder.metadata import RecordingMetadata
+
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 26, 58),
+        event_type=EventType.ZONE_CHANGE,
+        raw_line='test',
+        metadata={"dungeon_name": "Test Dungeon", "dungeon_id": "23"},
+    )
+
+    metadata = RecordingMetadata.from_dungeon(
+        dungeon_name="Test Dungeon",
+        dungeon_id=23,
+        difficulty_id=31,
+        duration=100.0,
+        completed=False,
+        success=False,
+        start_time=datetime.now(),
+    )
+
+    with patch("fellowship_recorder.recorder.is_gpu_screen_recorder_available", return_value=True):
+        recorder = GpuScreenRecorder(
+            output_dir=tmp_path,
+            log_directory=tmp_path,
+        )
+
+        session = RecordingSession(
+            start_event=start_event,
+            process=MagicMock(),
+            output_file=tmp_path / "test.mkv",
+        )
+
+        metadata_file = tmp_path / "test_metadata.txt"
+        recorder._create_ffmpeg_metadata(session, metadata_file, metadata)
+
+    assert metadata_file.exists()
+    content = metadata_file.read_text()
+    assert "RESULT=Abandoned" in content
+
+
+def test_ffmpeg_metadata_result_success(tmp_path):
+    """Test that FFmpeg metadata writes RESULT=Success when completed=True and success=True."""
+    from fellowship_recorder.metadata import RecordingMetadata
+
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 26, 58),
+        event_type=EventType.ZONE_CHANGE,
+        raw_line='test',
+        metadata={"dungeon_name": "Test Dungeon", "dungeon_id": "23"},
+    )
+
+    metadata = RecordingMetadata.from_dungeon(
+        dungeon_name="Test Dungeon",
+        dungeon_id=23,
+        difficulty_id=31,
+        duration=100.0,
+        completed=True,
+        success=True,
+        start_time=datetime.now(),
+    )
+
+    with patch("fellowship_recorder.recorder.is_gpu_screen_recorder_available", return_value=True):
+        recorder = GpuScreenRecorder(
+            output_dir=tmp_path,
+            log_directory=tmp_path,
+        )
+
+        session = RecordingSession(
+            start_event=start_event,
+            process=MagicMock(),
+            output_file=tmp_path / "test.mkv",
+        )
+
+        metadata_file = tmp_path / "test_metadata.txt"
+        recorder._create_ffmpeg_metadata(session, metadata_file, metadata)
+
+    assert metadata_file.exists()
+    content = metadata_file.read_text()
+    assert "RESULT=Success" in content
+
+
+def test_ffmpeg_metadata_result_failed(tmp_path):
+    """Test that FFmpeg metadata writes RESULT=Failed when completed=True and success=False."""
+    from fellowship_recorder.metadata import RecordingMetadata
+
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 26, 58),
+        event_type=EventType.ZONE_CHANGE,
+        raw_line='test',
+        metadata={"dungeon_name": "Test Dungeon", "dungeon_id": "23"},
+    )
+
+    metadata = RecordingMetadata.from_dungeon(
+        dungeon_name="Test Dungeon",
+        dungeon_id=23,
+        difficulty_id=31,
+        duration=100.0,
+        completed=True,
+        success=False,
+        start_time=datetime.now(),
+    )
+
+    with patch("fellowship_recorder.recorder.is_gpu_screen_recorder_available", return_value=True):
+        recorder = GpuScreenRecorder(
+            output_dir=tmp_path,
+            log_directory=tmp_path,
+        )
+
+        session = RecordingSession(
+            start_event=start_event,
+            process=MagicMock(),
+            output_file=tmp_path / "test.mkv",
+        )
+
+        metadata_file = tmp_path / "test_metadata.txt"
+        recorder._create_ffmpeg_metadata(session, metadata_file, metadata)
+
+    assert metadata_file.exists()
+    content = metadata_file.read_text()
+    assert "RESULT=Failed" in content

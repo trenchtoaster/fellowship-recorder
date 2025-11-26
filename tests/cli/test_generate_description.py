@@ -54,7 +54,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=605.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime(2025, 11, 24, 8, 36, 19),
         )
 
@@ -70,7 +70,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=605.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime.now(),
         )
 
@@ -93,7 +93,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=605.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime.now(),
         )
 
@@ -125,7 +125,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=605.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime.now(),
             affixes=[6, 4, 8, 11],
         )
@@ -145,7 +145,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=605.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime.now(),
             affixes=[6, 4, 8],
         )
@@ -179,7 +179,7 @@ class TestGenerateVideoDescription:
         """Test description with minimal metadata."""
         metadata = RecordingMetadata(
             duration=100.0,
-            result=True,
+            completed=True, success=True,
         )
 
         description = generate_video_description(metadata)
@@ -194,7 +194,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=605.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime.now(),
         )
 
@@ -219,7 +219,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=7200.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime.now(),
         )
 
@@ -238,7 +238,7 @@ class TestGenerateVideoDescription:
             dungeon_id=23,
             difficulty_id=31,
             duration=605.0,
-            result=True,
+            completed=True, success=True,
             start_time=datetime.now(),
         )
 

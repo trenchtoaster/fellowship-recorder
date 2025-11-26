@@ -43,6 +43,28 @@ def test_parse_zone_change(parser):
     assert event.metadata["instance_type"] == "31"
 
 
+def test_zone_change_leaving_stronghold_is_start_event(parser):
+    """Test that ZONE_CHANGE leaving Stronghold is treated as a start event."""
+    line = '2025-11-26T10:26:58.573+08:00|ZONE_CHANGE|"Ransack of Drakheim"|23|31|'
+    event = parser.parse_line(line)
+
+    assert event is not None
+    assert event.event_type == EventType.ZONE_CHANGE
+    assert event.is_start_event
+    assert not event.is_end_event
+
+
+def test_zone_change_entering_stronghold_is_end_event(parser):
+    """Test that ZONE_CHANGE entering Stronghold is treated as an end event."""
+    line = '2025-11-26T10:39:31.381+08:00|ZONE_CHANGE|"The Stronghold"|17|1|'
+    event = parser.parse_line(line)
+
+    assert event is not None
+    assert event.event_type == EventType.ZONE_CHANGE
+    assert not event.is_start_event
+    assert event.is_end_event
+
+
 def test_parse_dungeon_start(parser):
     """Test parsing DUNGEON_START event."""
     line = '2025-11-24T08:36:19.097+08:00|DUNGEON_START|"Ransack of Drakheim"|23|31|[6,4]|0'
@@ -238,3 +260,35 @@ def test_event_type_enum():
     assert EventType.ENCOUNTER_END.value == "ENCOUNTER_END"
     assert EventType.ZONE_CHANGE.value == "ZONE_CHANGE"
     assert EventType.LOGGING_STARTED.value == "LOGGING_STARTED"
+
+
+def test_parse_unit_death_with_kill_score(parser):
+    """Test parsing UNIT_DEATH event with kill_score."""
+    line = '2025-11-24T08:50:15.235+08:00|UNIT_DEATH|Npc-1234567890-30|"Drakheim Warlord"|Player-5000|"Player5"|1312|"Heartseeker Barrage"|0|0.85'
+    event = parser.parse_line(line)
+
+    assert event is not None
+    assert event.event_type == EventType.UNIT_DEATH
+    assert event.metadata["unit_name"] == "Drakheim Warlord"
+    assert event.metadata["kill_score"] == "0.85"
+
+
+def test_parse_unit_death_no_kill_score(parser):
+    """Test parsing UNIT_DEATH event with missing kill_score field."""
+    line = '2025-11-24T08:50:15.235+08:00|UNIT_DEATH|Npc-1234567890-30|"Goblin"'
+    event = parser.parse_line(line)
+
+    assert event is not None
+    assert event.event_type == EventType.UNIT_DEATH
+    assert "kill_score" not in event.metadata
+
+
+def test_parse_unit_death_shadowlord(parser):
+    """Test parsing UNIT_DEATH event for Shadow Lord Emissary."""
+    line = '2025-11-24T08:50:15.235+08:00|UNIT_DEATH|Npc-12345678|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1312|"Heartseeker Barrage"|0|0.0'
+    event = parser.parse_line(line)
+
+    assert event is not None
+    assert event.event_type == EventType.UNIT_DEATH
+    assert event.metadata["unit_name"] == "Emissary of the Shadow Lord"
+    assert event.metadata["kill_score"] == "0.0"

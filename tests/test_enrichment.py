@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from fellowship_recorder.enrichment import MetadataEnricher
-from fellowship_recorder.metadata import RecordingMetadata
+from fellowship_recorder.metadata import Affix, RecordingMetadata
 
 
 @pytest.fixture
@@ -30,7 +30,8 @@ def sample_metadata():
         dungeon_id=23,
         difficulty_id=31,
         duration=605.0,
-        result=True,
+        completed=True,
+        success=True,
         start_time=datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc),
     )
 
@@ -255,3 +256,260 @@ invalid death line
         players = enricher._extract_players(log_file, start_time, end_time)
 
         assert len(players) == 2
+
+    def test_extract_kill_objective_shadowlord_adventure(
+        self, enricher, log_directory
+    ):
+        """Test Shadow Lord's Trial in Adventure dungeon (2 Shadowlords, 50% each = 100%)."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|Npc-1000|"Goblin"|Player-1|"TestPlayer"|123|"Attack"|0|0.1
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1312|"Heartseeker Barrage"|0|0.0
+2025-11-24T08:43:00.000+00:00|UNIT_DEATH|Npc-3000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1027|"Freezing Torrent"|0|0.5
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        affixes = [Affix(affix_id=19, affix_name="Shadow Lord's Trial", affix_type="Curse")]
+        dungeon_id = 12
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, affixes, dungeon_id
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(100.0)
+        assert result.completed_at is not None
+        assert result.completion_offset == pytest.approx(401.0)
+        assert result.orb_count == pytest.approx(0.1)
+
+    def test_extract_kill_objective_shadowlord_dungeon(
+        self, enricher, log_directory
+    ):
+        """Test Shadow Lord's Trial in regular Dungeon (3 Shadowlords, 33.33% each = 100%)."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|Npc-1000|"Goblin"|Player-1|"TestPlayer"|123|"Attack"|0|0.1
+2025-11-24T08:38:00.000+00:00|UNIT_DEATH|Npc-2000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1312|"Heartseeker Barrage"|0|0.0
+2025-11-24T08:41:00.000+00:00|UNIT_DEATH|Npc-3000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|126|"Starfall Volley"|0|0.333333
+2025-11-24T08:44:00.000+00:00|UNIT_DEATH|Npc-4000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1018|"Ice Comet"|0|0.666667
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        affixes = [Affix(affix_id=19, affix_name="Shadow Lord's Trial", affix_type="Curse")]
+        dungeon_id = 7
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, affixes, dungeon_id
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(100.0)
+        assert result.completed_at is not None
+        assert result.completion_offset == pytest.approx(461.0)
+        assert result.orb_count == pytest.approx(0.1)
+
+    def test_extract_kill_objective_no_shadowlord(self, enricher, log_directory):
+        """Test kill objective without Shadow Lord's Trial affix."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|Npc-1000|"Pillager"|Player-1|"TestPlayer"|123|"Attack"|0|0.5
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Mancatcher"|Player-1|"TestPlayer"|1315|"Soulbrand"|0|0.8
+2025-11-24T08:43:00.000+00:00|UNIT_DEATH|Npc-3000|"Warlord Brogg"|Player-1|"TestPlayer"|1312|"Heartseeker Barrage"|0|1.0
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        affixes = [Affix(affix_id=8, affix_name="Blood Shards", affix_type="Curse")]
+        dungeon_id = 12
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, affixes, dungeon_id
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(100.0)
+        assert result.completed_at is not None
+        assert result.completion_offset == pytest.approx(401.0)
+
+    def test_extract_kill_objective_no_completion(self, enricher, log_directory):
+        """Test kill objective when dungeon not completed."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|Npc-1000|"Goblin"|Player-1|"TestPlayer"|123|"Attack"|0|0.3
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Orc"|Player-1|"TestPlayer"|456|"Fireball"|0|0.6
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, None, None
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(60.0)
+        assert result.completed_at is None
+        assert result.completion_offset is None
+
+    def test_extract_kill_objective_empty_log(self, enricher, log_directory):
+        """Test kill objective extraction with empty log file."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+        log_file.write_text("")
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, None, None
+        )
+
+        assert result is None
+
+    def test_extract_kill_objective_no_kills(self, enricher, log_directory):
+        """Test kill objective extraction with no UNIT_DEATH events."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|ABILITY_DAMAGE|Player-1|"TestPlayer"|Npc-1000|"Goblin"|123|"Attack"|0|0|0|-1|0|1668|Magical|Hit|
+2025-11-24T08:40:00.000+00:00|ENCOUNTER_START|"Boss Name"|1|
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, None, None
+        )
+
+        assert result is None
+
+    def test_extract_kill_objective_malformed_lines(self, enricher, log_directory):
+        """Test kill objective extraction handles malformed UNIT_DEATH lines."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|incomplete
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Orc"|Player-1|"TestPlayer"|456|"Fireball"|0|0.5
+invalid line here
+2025-11-24T08:43:00.000+00:00|UNIT_DEATH|too|few|fields
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, None, None
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(50.0)
+
+    def test_extract_kill_objective_shadowlord_with_normal_kills(
+        self, enricher, log_directory
+    ):
+        """Test that normal mob kills with score >= 1.0 don't set completion for Shadow Lord's Trial."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|Npc-500|"Eldrin Recruit"|Player-1|"TestPlayer"|123|"Attack"|0|1.0
+2025-11-24T08:37:00.000+00:00|UNIT_DEATH|Npc-600|"Tundra Stalker"|Player-1|"TestPlayer"|456|"Fireball"|0|1.5
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|789|"Ice Blast"|0|0.0
+2025-11-24T08:43:00.000+00:00|UNIT_DEATH|Npc-3000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1312|"Heartseeker Barrage"|0|0.5
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        affixes = [Affix(affix_id=19, affix_name="Shadow Lord's Trial", affix_type="Curse")]
+        dungeon_id = 8
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, affixes, dungeon_id
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(100.0)
+        assert result.completed_at == "2025-11-24T08:43:00.000Z"
+        assert result.completion_offset == pytest.approx(401.0)
+        assert result.orb_count == pytest.approx(2.5)
+
+    def test_extract_kill_objective_shadowlord_partial(
+        self, enricher, log_directory
+    ):
+        """Test partial completion with only 1 of 2 shadowlords killed."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|Npc-1000|"Goblin"|Player-1|"TestPlayer"|123|"Attack"|0|0.4
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1312|"Heartseeker Barrage"|0|0.5
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        affixes = [Affix(affix_id=19, affix_name="Shadow Lord's Trial", affix_type="Curse")]
+        dungeon_id = 12
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, affixes, dungeon_id
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(50.0)
+        assert result.completed_at is None
+        assert result.completion_offset is None
+        assert result.orb_count == pytest.approx(0.4)
+
+    def test_extract_kill_objective_shadowlord_unknown_dungeon(
+        self, enricher, log_directory
+    ):
+        """Test shadowlord with unknown dungeon defaults to 50% per shadowlord."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:36:20.000+00:00|UNIT_DEATH|Npc-1000|"Goblin"|Player-1|"TestPlayer"|123|"Attack"|0|0.2
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Emissary of the Shadow Lord"|Player-1|"TestPlayer"|1312|"Heartseeker Barrage"|0|0.3
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        affixes = [Affix(affix_id=19, affix_name="Shadow Lord's Trial", affix_type="Curse")]
+        dungeon_id = 999
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, affixes, dungeon_id
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(50.0)
+        assert result.orb_count == pytest.approx(0.2)
+
+    def test_extract_kill_objective_outside_time_range(self, enricher, log_directory):
+        """Test that kills outside the time range are ignored."""
+        log_file = log_directory / "CombatLog241125_083000.txt"
+
+        log_content = """2025-11-24T08:30:00.000+00:00|UNIT_DEATH|Npc-1000|"Goblin"|Player-1|"TestPlayer"|123|"Attack"|0|0.5
+2025-11-24T08:40:00.000+00:00|UNIT_DEATH|Npc-2000|"Orc"|Player-1|"TestPlayer"|456|"Fireball"|0|0.8
+2025-11-24T08:50:00.000+00:00|UNIT_DEATH|Npc-3000|"Troll"|Player-1|"TestPlayer"|789|"Ice Blast"|0|1.0
+"""
+        log_file.write_text(log_content)
+
+        start_time = datetime(2025, 11, 24, 8, 36, 19, tzinfo=timezone.utc)
+        end_time = datetime(2025, 11, 24, 8, 46, 19, tzinfo=timezone.utc)
+
+        result = enricher._extract_kill_objective(
+            log_file, start_time, end_time, None, None
+        )
+
+        assert result is not None
+        assert result.final_score == pytest.approx(80.0)
