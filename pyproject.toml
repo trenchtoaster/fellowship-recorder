@@ -1,6 +1,6 @@
 [project]
 name = "fellowship-recorder"
-version = "0.3.0"
+version = "0.3.1"
 description = "Automatic Fellowship activity recorder using gpu-screen-recorder"
 readme = "README.md"
 authors = [{ name = "trench", email = "trenchtoaster@gmail.com" }]
