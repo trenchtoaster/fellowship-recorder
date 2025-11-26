@@ -1,6 +1,6 @@
 # Fellowship Recorder
 
-Automatically record your Fellowship dungeon runs with smart detection, chapter markers, and rich metadata.
+Automatically record your Fellowship dungeon runs with automatic detection, chapter markers, and rich metadata.
 
 ## Features
 
@@ -85,24 +85,65 @@ Each recording creates two files:
 **Metadata file** (`.json`):
 ```json
 {
-  "dungeon_name": "Ransack of Drakheim",
-  "difficulty_name": "Paragon 7",
-  "duration": 605.0,
+  "started_at": "...",
+  "ended_at": "...",
+  "duration": 0.0,
   "result": true,
-  "party": [...],
-  "deaths": [...],
-  "affixes": [...],
-  "chapters": [...]
+  "dungeon_id": 0,
+  "dungeon_name": "...",
+  "difficulty_id": 0,
+  "difficulty_name": "...",
+  "mode_id": 0,
+  "mode_name": "...",
+  "affixes": [
+    {
+      "affix_id": 0,
+      "affix_name": "...",
+      "affix_type": "..."
+    }
+  ],
+  "party": [
+    {
+      "player_name": "...",
+      "hero_id": 0,
+      "hero_name": "..."
+    }
+  ],
+  "encounters": [
+    {
+      "boss_id": 0,
+      "boss_name": "...",
+      "start_time_offset": 0.0,
+      "end_time_offset": 0.0,
+      "success": true
+    }
+  ],
+  "deaths": [
+    {
+      "player_name": "...",
+      "hero_id": 0,
+      "hero_name": "...",
+      "occurred_at": "...",
+      "time_offset": 0.0
+    }
+  ],
+  "chapters": [
+    {
+      "title": "...",
+      "time_offset": 0.0
+    }
+  ],
+  "unique_hash": "..."
 }
 ```
 
 ## How It Works
 
-1. **Watches** your Fellowship `CombatLogs` directory for changes
-2. **Parses** combat log events (`DUNGEON_START`, `DUNGEON_END`, `ENCOUNTER_START`, `ALLY_DEATH`, etc.)
-3. **Controls** gpu-screen-recorder to start/stop recording
-4. **Enriches** metadata by scanning logs for party info, deaths, and affixes
-5. **Embeds** chapter markers and metadata tags using FFmpeg
+1. Watches your Fellowship `CombatLogs` directory for changes
+2. Parses combat log events (`DUNGEON_START`, `DUNGEON_END`, `ENCOUNTER_START`, `ALLY_DEATH`, etc.)
+3. Controls gpu-screen-recorder to start/stop recording
+4. Enriches metadata by scanning logs for party info, deaths, and affixes
+5. Embeds chapter markers and metadata tags using FFmpeg
 
 ## Configuration
 
