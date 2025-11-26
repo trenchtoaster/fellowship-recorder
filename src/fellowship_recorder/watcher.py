@@ -1,5 +1,7 @@
 """File watcher for Fellowship combat logs."""
 
+from __future__ import annotations
+
 import logging
 import time
 from pathlib import Path
@@ -8,7 +10,7 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from .config import FellowshipRecorderConfig
-from .parser import CombatLogParser
+from .parser import CombatLogEvent, CombatLogParser, EventType
 from .recorder import GpuScreenRecorder
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 class CombatLogHandler(FileSystemEventHandler):
     """Handles file system events for Fellowship combat logs."""
 
-    def __init__(self, config: FellowshipRecorderConfig):
+    def __init__(self, config: FellowshipRecorderConfig) -> None:
         """Initialize handler.
 
         Args:
@@ -38,7 +40,7 @@ class CombatLogHandler(FileSystemEventHandler):
             add_chapters=config.add_chapter_markers,
             boss_markers=config.boss_markers,
             death_markers=config.death_markers,
-            death_chapter_offset=config.death_chapter_offset,
+            chapter_offset=config.chapter_offset,
             overrun=config.get_overrun_time(),
             generate_video_description=config.generate_video_description,
         )
@@ -117,7 +119,14 @@ class CombatLogHandler(FileSystemEventHandler):
         self.last_activity_time = time.time()
 
         if event.is_start_event:
-            if self.config.should_record(event.metadata):
+            if (
+                self.recorder.is_recording()
+                and event.event_type == EventType.DUNGEON_START
+            ):
+                if not self.config.should_record(event.metadata):
+                    logger.info("Dungeon does not meet recording filters, stopping")
+                    self._stop_recording_with_event(None)
+            elif self.config.should_record(event.metadata):
                 logger.info("Starting recording for dungeon")
                 logger.info(f"Metadata: {event.metadata}")
                 self.recorder.start_recording(event)
@@ -158,8 +167,12 @@ class CombatLogHandler(FileSystemEventHandler):
             logger.info("Overrun period elapsed, stopping recording")
             self._stop_recording_with_event(self.pending_end_event)
 
-    def _stop_recording_with_event(self, end_event):
-        """Stop the recorder and clear pending state."""
+    def _stop_recording_with_event(self, end_event: CombatLogEvent | None) -> None:
+        """Stop the recorder and clear pending state.
+
+        Args:
+            end_event: The end event or None
+        """
         if self.recorder.is_recording():
             logger.info("Stopping recording")
             self.recorder.stop_recording(end_event)
@@ -171,7 +184,7 @@ class CombatLogHandler(FileSystemEventHandler):
 class FellowshipRecorderWatcher:
     """Main watcher application."""
 
-    def __init__(self, config: FellowshipRecorderConfig):
+    def __init__(self, config: FellowshipRecorderConfig) -> None:
         """Initialize watcher.
 
         Args:
