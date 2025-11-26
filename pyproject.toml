@@ -1,6 +1,6 @@
 [project]
 name = "fellowship-recorder"
-version = "0.2.0"
+version = "0.3.0"
 description = "Automatic Fellowship activity recorder using gpu-screen-recorder"
 readme = "README.md"
 authors = [{ name = "trench", email = "trenchtoaster@gmail.com" }]
@@ -37,8 +37,19 @@ target-version = "py314"
 include = ["pyproject.toml", "src/**/*.py"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "SIM", "UP"]
-ignore = ["E501"]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade
+    "ANN",  # flake8-annotations
+]
+ignore = [
+    "E501",      # Line too long
+    "ANN401",    # Any type is disallowed
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -47,3 +58,9 @@ quote-style = "double"
 typeCheckingMode = "basic"
 venv = ".venv"
 venvPath = "."
+exclude = ["tests"]
+reportMissingTypeStubs = "warning"
+reportUnknownParameterType = "error"
+reportUnknownArgumentType = "none"
+reportUnknownVariableType = "none"
+reportUnknownMemberType = "none"
