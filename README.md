@@ -2,6 +2,9 @@
 
 Automatically record your Fellowship dungeon runs with automatic detection, chapter markers, and rich metadata.
 
+- This currently only works on Linux
+- "Enable Advanced Combat Logs" needs to be enabled within the Gameplay options in Fellowship
+
 ## Features
 
 - **Automatic recording** - Detects dungeon start/end from combat logs
@@ -80,7 +83,6 @@ uv run parse-log CombatLog.txt --list
 uv run generate-description video.mkv --output description.txt
 ```
 
-See [CLI Reference](src/fellowship_recorder/cli/REFERENCE.md) for complete documentation.
 
 ## Output Files
 
@@ -92,59 +94,10 @@ Each recording creates two files:
 
 **Metadata file** (`.json`):
 ```json
-{
-  "started_at": "...",
-  "ended_at": "...",
-  "duration": 0.0,
-  "result": true,
-  "dungeon_id": 0,
-  "dungeon_name": "...",
-  "difficulty_id": 0,
-  "difficulty_name": "...",
-  "mode_id": 0,
-  "mode_name": "...",
-  "affixes": [
-    {
-      "affix_id": 0,
-      "affix_name": "...",
-      "affix_type": "..."
-    }
-  ],
-  "party": [
-    {
-      "player_name": "...",
-      "hero_id": 0,
-      "hero_name": "..."
-    }
-  ],
-  "encounters": [
-    {
-      "boss_id": 0,
-      "boss_name": "...",
-      "start_time_offset": 0.0,
-      "end_time_offset": 0.0,
-      "success": true
-    }
-  ],
-  "deaths": [
-    {
-      "player_name": "...",
-      "hero_id": 0,
-      "hero_name": "...",
-      "occurred_at": "...",
-      "time_offset": 0.0
-    }
-  ],
-  "chapters": [
-    {
-      "title": "...",
-      "time_offset": 0.0
-    }
-  ],
-  "unique_hash": "..."
-}
-```
 
+See [CLI Reference](src/fellowship_recorder/cli/REFERENCE.md) for complete documentation.
+
+```
 ## How It Works
 
 1. Watches your Fellowship `CombatLogs` directory for changes
@@ -176,7 +129,7 @@ Edit `config.toml` to customize:
 **Chapters:**
 - `boss_markers` - Add chapters for boss encounters
 - `death_markers` - Add chapters for player deaths
-- `death_chapter_offset` - Offset death markers backward in seconds
+- `chapter_offset` - Offset death markers backward in seconds
 
 See `config.toml.example` for complete documentation.
 
