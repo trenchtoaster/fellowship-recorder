@@ -82,10 +82,10 @@ class FellowshipRecorderConfig(BaseModel):
         default=True,
         description="Add chapter markers for player deaths",
     )
-    death_chapter_offset: int = Field(
+    chapter_offset: int = Field(
         default=5,
         ge=0,
-        description="Seconds to offset death chapter markers backward (to see the death happen)",
+        description="Seconds to offset chapter markers backward (to see context before events)",
     )
     generate_video_description: bool = Field(
         default=False,
@@ -158,7 +158,7 @@ class FellowshipRecorderConfig(BaseModel):
                 flat_config["add_chapter_markers"] = chap.get("enabled")
                 flat_config["boss_markers"] = chap.get("boss_markers")
                 flat_config["death_markers"] = chap.get("death_markers")
-                flat_config["death_chapter_offset"] = chap.get("death_chapter_offset")
+                flat_config["chapter_offset"] = chap.get("chapter_offset")
 
             if "video" in data:
                 vid = data["video"]

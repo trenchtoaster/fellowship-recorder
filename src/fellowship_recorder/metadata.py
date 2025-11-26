@@ -1,13 +1,20 @@
 """Metadata generation for Fellowship recordings."""
 
+from __future__ import annotations
+
 import hashlib
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from .mappings import format_difficulty, get_affix_info, get_mode_name
+from .mappings import (
+    format_difficulty,
+    get_affix_info,
+    get_mode_name,
+    get_target_time,
+)
 
 
 def to_utc_iso_string(dt_obj: datetime) -> str:
@@ -82,7 +89,31 @@ class Chapter(BaseModel):
     title: str = Field(description="Chapter title")
     time_offset: float = Field(
         ge=0,
-        description="Seconds since recording started (includes configured offset for context)",
+        description="Seconds since recording started (includes configured offset)",
+    )
+
+
+class KillObjective(BaseModel):
+    """Kill score objective completion data."""
+
+    completed_at: str | None = Field(
+        default=None,
+        description="ISO 8601 UTC timestamp when kill score objective completed (score >= 1.0)",
+    )
+    completion_offset: float | None = Field(
+        default=None,
+        ge=0,
+        description="Time offset in seconds from dungeon start when kill score objective completed",
+    )
+    final_score: float | None = Field(
+        default=None,
+        ge=0,
+        description="Final kill score as percentage",
+    )
+    orb_count: float | None = Field(
+        default=None,
+        ge=0,
+        description="Total orbs collected (Shadow Lord's Trial only). 30 orbs spawn the Shadow Lord.",
     )
 
 
@@ -96,7 +127,20 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
         default=None, description="ISO 8601 UTC timestamp when dungeon ended"
     )
     duration: float = Field(ge=0, description="Duration of recording in seconds")
-    result: bool = Field(description="Whether the dungeon was completed successfully")
+    target_time: float | None = Field(
+        default=None,
+        description="Target completion time in seconds for challenge mode (None if quick play or unknown)",
+    )
+    remaining_time: float | None = Field(
+        default=None,
+        description="Time remaining when completed in seconds (challenge mode only, None if target time unknown)",
+    )
+    completed: bool = Field(
+        description="Whether the dungeon run finished (vs abandoned due to crash/quit)"
+    )
+    success: bool = Field(
+        description="Whether the dungeon was successful (vs failed timer/wipe)"
+    )
 
     dungeon_id: int | None = Field(default=None, description="Dungeon ID")
     dungeon_name: str | None = Field(
@@ -121,6 +165,9 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
     )
     party: list[Player] = Field(
         default_factory=list, description="List of party members"
+    )
+    kill_objective: KillObjective | None = Field(
+        default=None, description="Kill objective completion data"
     )
     encounters: list[Encounter] | None = Field(
         default=None, description="List of boss encounters during run"
@@ -154,14 +201,14 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
         self,
         boss_markers: bool = True,
         death_markers: bool = True,
-        death_chapter_offset: int = 5,
+        chapter_offset: int = 5,
     ) -> list[Chapter]:
         """Generate chapter markers from encounters and deaths.
 
         Args:
             boss_markers: Whether to include boss encounter markers
             death_markers: Whether to include death markers
-            death_chapter_offset: Seconds to offset death markers backward
+            chapter_offset: Seconds to offset chapter markers backward
 
         Returns:
             List of Chapter objects sorted by time offset
@@ -180,7 +227,7 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
                 else:
                     title = f"Death: {player_name}"
 
-                time_offset = max(0, death.time_offset - death_chapter_offset)
+                time_offset = max(0, death.time_offset - chapter_offset)
                 chapters.append(
                     Chapter(
                         title=title,
@@ -199,10 +246,12 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
                 else:
                     title = f"{encounter.boss_name} (Attempt {attempt_num})"
 
+                time_offset = max(0, encounter.start_time_offset - chapter_offset)
+
                 chapters.append(
                     Chapter(
                         title=title,
-                        time_offset=encounter.start_time_offset,
+                        time_offset=time_offset,
                     )
                 )
 
@@ -215,8 +264,10 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
         dungeon_id: int | None,
         difficulty_id: int | None,
         duration: float,
-        result: bool,
+        completed: bool,
+        success: bool,
         start_time: datetime,
+        end_time: datetime | None = None,
         mode_id: str | None = None,
         affixes: list[int] | None = None,
     ) -> RecordingMetadata:
@@ -227,8 +278,10 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
             dungeon_id: Dungeon ID
             difficulty_id: Difficulty level
             duration: Duration in seconds
-            result: Whether dungeon was completed successfully
+            completed: Whether the dungeon run finished (vs abandoned)
+            success: Whether the dungeon was successful (vs failed)
             start_time: When the run started
+            end_time: When the run ended (if None, calculated from start_time + duration)
             mode_id: Dungeon mode ID (0=challenge, 1=quick_play)
             affixes: List of dungeon affix IDs
 
@@ -243,6 +296,7 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
             affix_list = []
             for affix_id in affixes:
                 affix_info = get_affix_info(affix_id)
+
                 if affix_info:
                     affix_list.append(
                         Affix(
@@ -253,14 +307,24 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
                     )
 
         started_at_str = to_utc_iso_string(start_time)
-        end_time = start_time + timedelta(seconds=duration)
-        ended_at_str = to_utc_iso_string(end_time)
+        ended_at_str = to_utc_iso_string(end_time) if end_time is not None else None
+
+        target_time_value = None
+        remaining_time = None
+        if mode_id == "0" and dungeon_id is not None:
+            target_time_value = get_target_time(dungeon_id)
+
+            if target_time_value is not None:
+                remaining_time = target_time_value - duration
 
         return RecordingMetadata(
             started_at=started_at_str,
             ended_at=ended_at_str,
             duration=duration,
-            result=result,
+            target_time=target_time_value,
+            remaining_time=remaining_time,
+            completed=completed,
+            success=success,
             dungeon_id=dungeon_id,
             dungeon_name=dungeon_name,
             difficulty_id=difficulty_id,
