@@ -65,8 +65,9 @@ else
 fi
 
 echo ""
-echo "Installing Python dependencies..."
+echo "Setting up project and dependencies..."
 uv sync
+uv pip install -e .
 
 echo ""
 echo "Setup complete!"
@@ -74,9 +75,9 @@ echo ""
 echo "Next steps:"
 echo "1. Copy the example config: cp config.toml.example config.toml"
 echo "2. Edit config.toml and configure your paths (monitor, Fellowship log directory, etc.)"
-echo "3. Run: uv run python -m fellowship_recorder"
+echo "3. Run: uv run fellowship-recorder"
 echo ""
 echo "Optional:"
-echo "- Enable auto-start on login: uv run python -m fellowship_recorder --enable-autostart"
-echo "- View all CLI options: uv run python -m fellowship_recorder --help"
+echo "- Enable auto-start on login: uv run fellowship-recorder --enable-autostart"
+echo "- View all CLI tools: uv run fellowship-recorder --help"
 echo ""
