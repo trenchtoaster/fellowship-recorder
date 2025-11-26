@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from ..config import FellowshipRecorderConfig
 from ..enrichment import MetadataEnricher
 from ..metadata import RecordingMetadata
 from ..parser import CombatLogParser, EventType
@@ -50,7 +51,11 @@ def parse_combat_log(
                 )
 
                 success_str = end_event.metadata.get("success", "0")
-                result = bool(int(success_str))
+                success = bool(int(float(success_str)))
+
+                completed = (
+                    end_time is not None and end_time != current_run["start_time"]
+                )
 
                 metadata = RecordingMetadata.from_dungeon(
                     dungeon_name=current_run["start_event"].metadata.get(
@@ -63,8 +68,10 @@ def parse_combat_log(
                         current_run["start_event"].metadata.get("difficulty_id", 0)
                     ),
                     duration=duration,
-                    result=result,
+                    completed=completed,
+                    success=success,
                     start_time=current_run["start_time"],
+                    end_time=end_time,
                     mode_id=current_run["start_event"].metadata.get("mode"),
                     affixes=[
                         int(x)
@@ -137,12 +144,20 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if not args.log_file.exists():
-        print(f"Error: Log file not found: {args.log_file}", file=sys.stderr)
+    log_file = args.log_file
+    if not log_file.exists() and not log_file.is_absolute():
+        config = FellowshipRecorderConfig.from_toml()
+        config_log_file = config.log_directory / log_file
+
+        if config_log_file.exists():
+            log_file = config_log_file
+
+    if not log_file.exists():
+        print(f"Error: Log file not found: {log_file}", file=sys.stderr)
         sys.exit(1)
 
     runs = parse_combat_log(
-        args.log_file, args.output if not args.list and not args.run else None
+        log_file, args.output if not args.list and not args.run else None
     )
 
     if args.run:
@@ -166,13 +181,34 @@ def main() -> None:
     elif args.list or (not args.output and len(runs) > 0):
         print(f"\nFound {len(runs)} dungeon run(s) in {args.log_file.name}:\n")
         for i, metadata in enumerate(runs, 1):
-            result_str = "✓ Success" if metadata.result else "✗ Failed"
+            if not metadata.completed:
+                result_str = "Abandoned"
+            elif metadata.success:
+                result_str = "Success"
+            else:
+                result_str = "Failed"
+
             print(
                 f"{i}. {metadata.dungeon_name} ({metadata.difficulty_name}) - {result_str}"
             )
             print(f"   Started: {metadata.started_at}")
             print(f"   Ended: {metadata.ended_at}")
             print(f"   Duration: {metadata.duration:.1f}s")
+
+            if metadata.remaining_time is not None:
+                sign = "+" if metadata.remaining_time >= 0 else ""
+                print(f"   Remaining Time: {sign}{metadata.remaining_time:.1f}s")
+
+            if (
+                metadata.kill_objective
+                and metadata.kill_objective.final_score is not None
+            ):
+                print(f"   Kill Score: {metadata.kill_objective.final_score:.1f}%")
+
+            if metadata.affixes:
+                affix_names = ", ".join(affix.affix_name for affix in metadata.affixes)
+                print(f"   Affixes: {affix_names}")
+
             print(
                 f"   Bosses: {len(metadata.encounters) if metadata.encounters else 0}"
             )

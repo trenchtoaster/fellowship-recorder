@@ -12,6 +12,10 @@ Parse combat logs and generate metadata for dungeon runs. This can be used to pa
 uv run parse-log LOG_FILE [OPTIONS]
 ```
 
+`LOG_FILE` can be either:
+- An absolute or relative path to a combat log file
+- Just the filename (e.g., `CombatLog251125_090352.txt`) - will automatically check the `log_directory` from `config.toml`
+
 ### Options
 
 | Option | Description |
@@ -23,9 +27,14 @@ uv run parse-log LOG_FILE [OPTIONS]
 
 ### Examples
 
-**Parse a log file:**
+**Parse a log file (with full path):**
 ```bash
 uv run parse-log ~/.local/share/Steam/steamapps/common/Fellowship/fellowship/Saved/CombatLogs/CombatLog251125_090352.txt
+```
+
+**Parse a log file (using filename only - reads from config.toml log_directory):**
+```bash
+uv run parse-log CombatLog251125_090352.txt
 ```
 
 **List all runs in a log:**
@@ -35,17 +44,25 @@ uv run parse-log CombatLog251125_090352.txt --list
 
 Output:
 ```
-Found 3 dungeon run(s) in CombatLog251125_090352.txt:
+Found 2 dungeon run(s) in CombatLog251125_090352.txt:
 
-1. Wyrmheart (Eternal 26) - ✓ Success
-   Started: 2025-11-25T09:03:52Z
+1. Wyrmheart (Eternal 26) - Success
+   Started: 2025-11-25T09:03:52.000Z
+   Ended: 2025-11-25T09:11:44.000Z
    Duration: 472.0s
+   Remaining Time: +334.0s
+   Kill Score: 100.0%
+   Affixes: Asha's Dilemma, Vayr's Legacy, Stone Skin, Carnage
    Bosses: 3
    Deaths: 2
 
-2. Urrak Markets (Paragon 7) - ✗ Failed
-   Started: 2025-11-25T09:15:20Z
-   Duration: 180.0s
+2. Silken Hollow (Eternal 6) - Success
+   Started: 2025-11-25T09:28:15.000Z
+   Ended: 2025-11-25T09:39:26.000Z
+   Duration: 671.0s
+   Remaining Time: +141.0s
+   Kill Score: 101.2%
+   Affixes: Asha's Dilemma, Vayr's Legacy, Stone Skin, Empowered Minions
    Bosses: 1
    Deaths: 5
 ```
@@ -66,14 +83,17 @@ The generated JSON includes comprehensive metadata about the dungeon run:
 
 ```json
 {
-  "started_at": "2025-11-25T00:20:19.986Z",
-  "ended_at": "2025-11-25T00:31:09.569Z",
-  "duration": 649.583008,
-  "result": true,
-  "dungeon_id": 5,
-  "dungeon_name": "The Heart of Tuzari",
-  "difficulty_id": 34,
-  "difficulty_name": "Eternal 2",
+  "started_at": "2025-11-25T02:28:03.334Z",
+  "ended_at": "2025-11-25T02:39:14.614Z",
+  "duration": 671.280,
+  "target_time": 812.0,
+  "remaining_time": 140.720,
+  "completed": true,
+  "success": true,
+  "dungeon_id": 24,
+  "dungeon_name": "Silken Hollow",
+  "difficulty_id": 38,
+  "difficulty_name": "Eternal 6",
   "mode_id": "0",
   "mode_name": "Challenge",
   "affixes": [
@@ -83,70 +103,102 @@ The generated JSON includes comprehensive metadata about the dungeon run:
       "affix_type": "Ascension"
     },
     {
+      "affix_id": 4,
+      "affix_name": "Vayr's Legacy",
+      "affix_type": "Ascension"
+    },
+    {
       "affix_id": 15,
       "affix_name": "Stone Skin",
+      "affix_type": "Curse"
+    },
+    {
+      "affix_id": 12,
+      "affix_name": "Empowered Minions",
       "affix_type": "Curse"
     }
   ],
   "party": [
     {
-      "player_id": "Player-1234",
-      "player_name": "Player1",
+      "player_id": "Player-1234567890",
+      "player_name": "PlayerOne",
       "hero_id": 20,
       "hero_name": "Vigour",
       "is_recording_player": true,
       "item_level": 330.0
     },
     {
-      "player_id": "Player-5678",
-      "player_name": "Player2",
+      "player_id": "Player-2345678901",
+      "player_name": "PlayerTwo",
+      "hero_id": 2,
+      "hero_name": "Elarion",
+      "is_recording_player": false,
+      "item_level": 271.1
+    },
+    {
+      "player_id": "Player-3456789012",
+      "player_name": "PlayerThree",
       "hero_id": 17,
       "hero_name": "Rime",
       "is_recording_player": false,
-      "item_level": 325.7
-    }
-  ],
-  "encounters": [
-    {
-      "boss_id": 10,
-      "boss_name": "Moar'gore, Master of Sacrifice",
-      "start_time_offset": 135.815,
-      "end_time_offset": 257.409,
-      "success": true
+      "item_level": 277.5
     },
     {
-      "boss_id": 11,
-      "boss_name": "Vun'Kahr, the Thorned Maw",
-      "start_time_offset": 533.195,
-      "end_time_offset": 648.254,
+      "player_id": "Player-4567890123",
+      "player_name": "PlayerFour",
+      "hero_id": 13,
+      "hero_name": "Meiko",
+      "is_recording_player": false,
+      "item_level": 323.6
+    }
+  ],
+  "kill_objective": {
+    "completed_at": "2025-11-25T02:36:11.008Z",
+    "completion_offset": 487.674,
+    "final_score": 101.18
+  },
+  "encounters": [
+    {
+      "boss_id": 33,
+      "boss_name": "Vexira, Mother of Nightmares",
+      "start_time_offset": 497.658,
+      "end_time_offset": 671.259,
       "success": true
     }
   ],
   "deaths": [
     {
-      "player_id": "Player-5678",
-      "player_name": "Player2",
+      "player_id": "Player-3456789012",
+      "player_name": "PlayerThree",
       "hero_id": 17,
       "hero_name": "Rime",
-      "occurred_at": "2025-11-25T00:24:36.828Z",
-      "time_offset": 256.842
+      "occurred_at": "2025-11-25T02:31:47.966Z",
+      "time_offset": 224.632
+    },
+    {
+      "player_id": "Player-1234567890",
+      "player_name": "PlayerOne",
+      "hero_id": 20,
+      "hero_name": "Vigour",
+      "occurred_at": "2025-11-25T02:31:51.406Z",
+      "time_offset": 228.072
     }
   ],
   "chapters": [
     {
-      "title": "Moar'gore, Master of Sacrifice (Kill)",
-      "time_offset": 135.815
-    },
-    {
       "title": "Death: Rime",
-      "time_offset": 256.842
+      "time_offset": 219.632
     },
     {
-      "title": "Vun'Kahr, the Thorned Maw (Kill)",
-      "time_offset": 533.195
+      "title": "Death: Vigour",
+      "time_offset": 223.072
+    },
+    {
+      "title": "Vexira, Mother of Nightmares (Kill)",
+      "time_offset": 492.658
     }
   ],
-  "unique_hash": "d4dc3af2483704c9a8a4b5df6a1078e0"
+  "unique_hash": "176c52baf9bd884d0403e29dace2cfe9"
 }
 ```
 
