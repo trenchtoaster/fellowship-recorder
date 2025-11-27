@@ -16,6 +16,34 @@ Reference tables for difficulty tiers, heroes, and affixes used by Fellowship Re
 
 **Mode:** Challenge (mode=0) shows tier names, Quick Play (mode=1) shows "Quick Play".
 
+## Dungeons
+
+### Adventures
+Shorter instances (~10-15 minutes)
+
+| Dungeon ID | Name | Target Time |
+|------------|------|-------------|
+| 6 | Empyrean Sands | 12:24 |
+| 8 | Wyrmheart | 13:26 |
+| 11 | Everdawn Grove | 11:48 |
+| 12 | Stormwatch | 14:08 |
+| 15 | Sailor's Abyss | 11:57 |
+| 21 | Urrak Markets | 13:01 |
+| 24 | Silken Hollow | 13:32 |
+| 25 | Godfall Quarry | 12:18 |
+
+### Capstone Dungeons
+Multi-boss instances (~25-30 minutes)
+
+| Dungeon ID | Name | Target Time |
+|------------|------|-------------|
+| 5 | The Heart of Tuzari | 24:45 |
+| 7 | Cithrel's Fall | 27:51 |
+| 13 | Wraithtide Vault | 29:42 |
+| 23 | Ransack of Drakheim | 29:00 |
+
+**Note:** Target times are for Challenge mode completion bonuses.
+
 ## Heroes
 
 | Hero ID | Hero Name |

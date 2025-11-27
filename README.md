@@ -93,11 +93,9 @@ Each recording creates two files:
 - Metadata tags (dungeon name, difficulty, result)
 
 **Metadata file** (`.json`):
-```json
 
 See [CLI Reference](src/fellowship_recorder/cli/REFERENCE.md) for complete documentation.
 
-```
 ## How It Works
 
 1. Watches your Fellowship `CombatLogs` directory for changes
@@ -140,7 +138,7 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for help with common issues.
 ## Documentation
 
 - [CLI Reference](src/fellowship_recorder/cli/REFERENCE.md) - Detailed CLI tools documentation
-- [Game Data Reference](src/fellowship_recorder/mappings/REFERENCE.md) - Difficulty tiers, heroes, and affixes
+- [Game Data Reference](src/fellowship_recorder/mappings/REFERENCE.md) - Difficulty tiers, heroes, dungeons, and affixes
 - [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
 - [Configuration](config.toml.example) - All configuration options
 
