@@ -188,6 +188,17 @@ class RecordingMetadata(BaseModel, populate_by_name=True):
         description="Overrun time in seconds after dungeon end",
     )
 
+    @property
+    def result_status(self) -> str:
+        """Get the result status of the run."""
+        if self.success:
+            return "Success"
+
+        if self.remaining_time is not None and self.remaining_time <= 0:
+            return "Failed"
+
+        return "Abandoned"
+
     def to_json(self, path: Path) -> None:
         """Write metadata to JSON file.
 
