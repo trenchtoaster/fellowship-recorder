@@ -184,6 +184,8 @@ class CombatLogParser:
                 metadata["mode"] = params[4]
             if len(params) >= 6:
                 metadata["duration"] = params[5]
+            if len(params) >= 7:
+                metadata["remaining_time"] = params[6]
             if len(params) >= 8:
                 metadata["success"] = params[7]
 
@@ -203,6 +205,6 @@ class CombatLogParser:
             if len(params) >= 2:
                 metadata["dungeon_id"] = params[1]
             if len(params) >= 3:
-                metadata["instance_type"] = params[2]
+                metadata["difficulty_id"] = params[2]
 
         return metadata

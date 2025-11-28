@@ -40,7 +40,7 @@ def test_parse_zone_change(parser):
     assert event.event_type == EventType.ZONE_CHANGE
     assert event.metadata["dungeon_name"] == "Ransack of Drakheim"
     assert event.metadata["dungeon_id"] == "23"
-    assert event.metadata["instance_type"] == "31"
+    assert event.metadata["difficulty_id"] == "31"
 
 
 def test_zone_change_leaving_stronghold_is_start_event(parser):
