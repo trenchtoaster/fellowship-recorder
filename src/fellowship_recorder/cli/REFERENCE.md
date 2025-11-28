@@ -9,7 +9,7 @@ Parse combat logs and generate metadata for dungeon runs. This can be used to pa
 ### Usage
 
 ```bash
-uv run parse-log LOG_FILE [OPTIONS]
+parse-log LOG_FILE [OPTIONS]
 ```
 
 `LOG_FILE` can be either:
@@ -24,22 +24,23 @@ uv run parse-log LOG_FILE [OPTIONS]
 | `-l, --list` | List all dungeon runs found in the log |
 | `-r, --run N` | Select specific run number (1-based index from --list) |
 | `--json` | Output JSON to stdout instead of file |
+| `--regenerate` | Regenerate all metadata JSONs from combat logs |
 
 ### Examples
 
 **Parse a log file (with full path):**
 ```bash
-uv run parse-log ~/.local/share/Steam/steamapps/common/Fellowship/fellowship/Saved/CombatLogs/CombatLog251125_090352.txt
+parse-log ~/.local/share/Steam/steamapps/common/Fellowship/fellowship/Saved/CombatLogs/CombatLog251125_090352.txt
 ```
 
 **Parse a log file (using filename only - reads from config.toml log_directory):**
 ```bash
-uv run parse-log CombatLog251125_090352.txt
+parse-log CombatLog251125_090352.txt
 ```
 
 **List all runs in a log:**
 ```bash
-uv run parse-log CombatLog251125_090352.txt --list
+parse-log CombatLog251125_090352.txt --list
 ```
 
 Output:
@@ -69,13 +70,20 @@ Found 2 dungeon run(s) in CombatLog251125_090352.txt:
 
 **Extract specific run:**
 ```bash
-uv run parse-log CombatLog251125_090352.txt --run 1 --output wyrmheart.json
+parse-log CombatLog251125_090352.txt --run 1 --output wyrmheart.json
 ```
 
 **Output to stdout:**
 ```bash
-uv run parse-log CombatLog251125_090352.txt --run 2 --json | jq .
+parse-log CombatLog251125_090352.txt --run 2 --json | jq .
 ```
+
+**Regenerate all metadata from logs:**
+```bash
+parse-log --regenerate
+```
+
+This parses all combat logs in the configured `log_directory` and generates JSON metadata files in `output_directory`. Useful for refreshing metadata after parser updates.
 
 ### Output Format
 
@@ -211,7 +219,7 @@ Generate YouTube-style video descriptions from metadata.
 ### Usage
 
 ```bash
-uv run generate-description VIDEO_FILE [OPTIONS]
+generate-description VIDEO_FILE [OPTIONS]
 ```
 
 ### Options
@@ -224,7 +232,7 @@ uv run generate-description VIDEO_FILE [OPTIONS]
 
 **Generate description:**
 ```bash
-uv run generate-description ~/Videos/20251125_002019_Heart_of_Tuzari_Eternal_2.mkv
+generate-description ~/Videos/20251125_002019_Heart_of_Tuzari_Eternal_2.mkv
 ```
 
 Output:
@@ -245,7 +253,7 @@ Affixes: Stone Skin
 
 **Save to file:**
 ```bash
-uv run generate-description video.mkv --output description.txt
+generate-description video.mkv --output description.txt
 ```
 
 ### Description Format
