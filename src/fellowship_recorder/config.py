@@ -112,17 +112,26 @@ class FellowshipRecorderConfig(BaseModel):
         """Load configuration from TOML file.
 
         Args:
-            config_path: Path to config file. If None, looks for config.toml in current directory.
+            config_path: Path to config file. If None, searches standard locations.
 
         Returns:
             FellowshipRecorderConfig instance
         """
         if config_path is None:
-            config_path = Path("config.toml")
+            search_paths = [
+                Path.home() / ".config" / "fellowship-recorder" / "config.toml",
+                Path("config.toml"),
+            ]
+            for path in search_paths:
+                if path.exists():
+                    config_path = path
+                    break
 
-        if not config_path.exists():
-            logger.debug(f"No config file found at {config_path}, using defaults")
+        if config_path is None or not config_path.exists():
+            logger.debug("No config file found, using defaults")
             return cls()
+
+        logger.debug(f"Loading config from {config_path}")
 
         try:
             with open(config_path, "rb") as f:
