@@ -505,3 +505,52 @@ def test_ffmpeg_metadata_result_failed(tmp_path):
     assert metadata_file.exists()
     content = metadata_file.read_text()
     assert "RESULT=Failed" in content
+
+
+def test_update_session_metadata_updates_timestamp(tmp_path):
+    """Test that update_session_metadata updates both metadata and timestamp.
+
+    When recording starts on ZONE_CHANGE but DUNGEON_START arrives later,
+    the timestamp should be updated so the filename uses DUNGEON_START time.
+    """
+    zone_change_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 26, 58),
+        event_type=EventType.ZONE_CHANGE,
+        raw_line="test",
+        metadata={"dungeon_name": "Ransack of Drakheim", "dungeon_id": "23"},
+    )
+
+    dungeon_start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 27, 5),
+        event_type=EventType.DUNGEON_START,
+        raw_line="test",
+        metadata={
+            "dungeon_name": "Ransack of Drakheim",
+            "dungeon_id": "23",
+            "difficulty_id": "31",
+            "mode": "0",
+        },
+    )
+
+    recorder = GpuScreenRecorder(
+        output_dir=tmp_path,
+        log_directory=tmp_path,
+    )
+
+    session = RecordingSession(
+        start_event=zone_change_event,
+        process=MagicMock(),
+        output_file=tmp_path / "temp.mp4",
+    )
+    recorder.active_session = session
+
+    assert session.start_event.timestamp == datetime(2025, 11, 26, 10, 26, 58)
+
+    recorder.update_session_metadata(dungeon_start_event)
+
+    assert session.start_event.timestamp == datetime(2025, 11, 26, 10, 27, 5)
+    assert session.start_event.metadata["difficulty_id"] == "31"
+    assert session.start_event.metadata["mode"] == "0"
+
+    filename = session.get_filename()
+    assert filename.startswith("20251126_102705_")

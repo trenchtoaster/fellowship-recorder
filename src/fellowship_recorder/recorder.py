@@ -283,6 +283,10 @@ class GpuScreenRecorder:
     def update_session_metadata(self, event: CombatLogEvent) -> None:
         """Update the active session's start event metadata.
 
+        When DUNGEON_START arrives after recording started (e.g., from ZONE_CHANGE),
+        this updates both the metadata and the timestamp so the filename uses
+        the canonical dungeon start time.
+
         Args:
             event: Event with additional metadata to merge
         """
@@ -290,6 +294,7 @@ class GpuScreenRecorder:
             return
 
         self.active_session.start_event.metadata.update(event.metadata)
+        self.active_session.start_event.timestamp = event.timestamp
 
     def _add_chapters_to_video(
         self, session: RecordingSession, video_path: Path, metadata: RecordingMetadata
