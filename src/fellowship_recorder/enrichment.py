@@ -358,6 +358,7 @@ class MetadataEnricher:
             orb_count = 0.0
 
         shadowlord_percentage = 50.0
+
         if has_shadowlord_trial and dungeon_id:
             dungeon_info = get_dungeon_info(dungeon_id)
 

@@ -146,6 +146,7 @@ class CombatLogParser:
         if event_type == EventType.ENCOUNTER_START:
             if len(params) >= 1:
                 metadata["encounter_id"] = params[0]
+
             if len(params) >= 2:
                 boss_name = params[1].strip('[]"')
                 metadata["encounter_name"] = boss_name
@@ -153,45 +154,59 @@ class CombatLogParser:
         elif event_type == EventType.ENCOUNTER_END:
             if len(params) >= 1:
                 metadata["encounter_id"] = params[0]
+
             if len(params) >= 2:
                 boss_name = params[1].strip('[]"')
                 metadata["encounter_name"] = boss_name
+
             if len(params) >= 3:
                 metadata["success"] = params[2]
 
         elif event_type == EventType.DUNGEON_START:
             if len(params) >= 1:
                 metadata["dungeon_name"] = params[0].strip('"')
+
             if len(params) >= 2:
                 metadata["dungeon_id"] = params[1]
+
             if len(params) >= 3:
                 metadata["difficulty_id"] = params[2]
+
             if len(params) >= 4:
                 metadata["affixes"] = params[3]
+
             if len(params) >= 5:
                 metadata["mode"] = params[4]
 
         elif event_type == EventType.DUNGEON_END:
             if len(params) >= 1:
                 metadata["dungeon_name"] = params[0].strip('"')
+
             if len(params) >= 2:
                 metadata["dungeon_id"] = params[1]
+
             if len(params) >= 3:
                 metadata["difficulty_id"] = params[2]
+
             if len(params) >= 4:
                 metadata["affixes"] = params[3]
+
             if len(params) >= 5:
                 metadata["mode"] = params[4]
+
             if len(params) >= 6:
                 metadata["duration"] = params[5]
+
             if len(params) >= 7:
                 metadata["remaining_time"] = params[6]
+
             if len(params) >= 8:
                 metadata["success"] = params[7]
 
         elif event_type == EventType.UNIT_DEATH:
             if len(params) >= 2:
                 metadata["unit_name"] = params[1].strip('"')
+
             if len(params) >= 8:
                 metadata["kill_score"] = params[7]
 
@@ -202,8 +217,10 @@ class CombatLogParser:
         elif event_type == EventType.ZONE_CHANGE:
             if len(params) >= 1:
                 metadata["dungeon_name"] = params[0].strip('"')
+
             if len(params) >= 2:
                 metadata["dungeon_id"] = params[1]
+
             if len(params) >= 3:
                 metadata["difficulty_id"] = params[2]
 

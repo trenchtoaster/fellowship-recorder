@@ -234,7 +234,9 @@ class FellowshipRecorderWatcher:
             return
 
         logger.info(f"Watching: {str(log_dir).replace(str(Path.home()), '~')}")
-        logger.info(f"Output: {str(self.config.output_directory).replace(str(Path.home()), '~')}")
+        logger.info(
+            f"Output: {str(self.config.output_directory).replace(str(Path.home()), '~')}"
+        )
         logger.info("Waiting for Fellowship activity...")
 
         self._initialize_file_positions()
