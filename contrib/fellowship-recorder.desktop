@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Fellowship Recorder
+Comment=Record Fellowship dungeon runs
+Exec=fellowship-recorder
+Icon=video-x-generic
+Terminal=true
+Type=Application
+Categories=Game;Utility;

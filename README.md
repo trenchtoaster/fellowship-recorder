@@ -5,6 +5,8 @@ Automatically record your Fellowship dungeon runs with automatic detection, chap
 - This currently only works on Linux
 - "Enable Advanced Combat Logs" needs to be enabled within the Gameplay options in Fellowship
 
+![TUI Dashboard](assets/tui.png)
+
 ## Features
 
 - **Automatic recording** - Detects dungeon start/end from combat logs
@@ -12,53 +14,65 @@ Automatically record your Fellowship dungeon runs with automatic detection, chap
 - **Chapter markers** - Boss encounters and player deaths (requires FFmpeg)
 - **Rich metadata** - Party composition, deaths, affixes, difficulty tiers (JSON)
 - **Configurable filters** - Record only specific difficulties or skip Quick Play
+- **TUI dashboard** - Live status, events, and recordings in a terminal interface
 - **Lightweight** - Minimal resource usage, runs in background
 
 ## Quick Start
 
 ### 1. Install
 
-**Latest release (recommended):**
+**Install uv** (if you don't have it):
+
 ```bash
-git clone --branch v0.3.1 https://github.com/trenchtoaster/fellowship-recorder.git
-cd fellowship-recorder
-./setup.sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**Development version:**
+**Install fellowship-recorder:**
+
 ```bash
-git clone https://github.com/trenchtoaster/fellowship-recorder.git
-cd fellowship-recorder
-./setup.sh
+uv tool install fellowship-recorder
 ```
 
-**Requirements:**
-- Python 3.12+
+This automatically handles Python and creates an isolated environment.
+
+**Uninstall:**
+
+```bash
+uv tool uninstall fellowship-recorder
+```
+
+**System requirements:**
+
+- Linux
 - [gpu-screen-recorder](https://git.dec05eba.com/gpu-screen-recorder) (AUR: `yay -S gpu-screen-recorder`)
 - FFmpeg (optional, for chapter markers: `sudo pacman -S ffmpeg`)
 - Fellowship via Steam/Proton
 
 ### 2. Configure
 
+Create a config file at `~/.config/fellowship-recorder/config.toml`:
+
 ```bash
-cp config.toml.example config.toml
-nvim config.toml  # Update log_directory and monitor at minimum
+mkdir -p ~/.config/fellowship-recorder
+curl -o ~/.config/fellowship-recorder/config.toml \
+  https://raw.githubusercontent.com/trenchtoaster/fellowship-recorder/main/config.toml.example
 ```
 
-Default Fellowship logs location:
-```
-~/.local/share/Steam/steamapps/common/Fellowship/fellowship/Saved/CombatLogs
-```
+Edit to set your monitor (find with `hyprctl monitors` or `xrandr`):
 
-See `config.toml.example` for all configuration options.
+```toml
+[recording]
+monitor = "DP-1"
+```
 
 ### 3. Run
 
 ```bash
-uv run fellowship-recorder
+fellowship-recorder
 ```
 
-The watcher will:
+The TUI dashboard will:
+
 - Monitor your combat logs
 - Auto-start recording on dungeon entry
 - Auto-stop when complete
@@ -66,29 +80,51 @@ The watcher will:
 
 ## CLI Commands
 
-Fellowship Recorder provides three CLI tools:
-
 ```bash
-# Start the recorder
-uv run fellowship-recorder
+# Start the TUI (default)
+fellowship-recorder
 
-# Enable/disable autostart on login
-uv run fellowship-recorder --enable-autostart
-uv run fellowship-recorder --disable-autostart
+# Run without TUI (headless mode)
+fellowship-recorder --headless
 
 # Parse combat logs (useful for processing existing logs)
-uv run parse-log CombatLog.txt --list
+parse-log CombatLog.txt --list
 
 # Generate video description from metadata
-uv run generate-description video.mkv --output description.txt
+generate-description video.mkv --output description.txt
 ```
 
+## TUI Dashboard
+
+The default interface for monitoring recordings in real-time.
+
+**Features:**
+
+- Live recording status with elapsed time
+- Current dungeon name and difficulty
+- Real-time log events (boss fights, deaths, zone changes)
+- Recent recordings list with the ability to open video or metadata files
+- Ability to delete a recording and the associated metadata files directly
+- Config summary
+
+**Key bindings:**
+
+| Key | Action |
+|-----|--------|
+| `q` | Quit |
+| `r` | Refresh recordings |
+| `c` | Clear event log |
+| `o` | Open selected video |
+| `m` | Open metadata JSON |
+| `f` | Open folder |
+| `d` | Delete recording and metadata files |
 
 ## Output Files
 
 Each recording creates two files:
 
 **Video file** (`.mkv` or `.mp4`):
+
 - Embedded chapter markers for boss fights and deaths
 - Metadata tags (dungeon name, difficulty, result)
 
@@ -106,30 +142,48 @@ See [CLI Reference](src/fellowship_recorder/cli/REFERENCE.md) for complete docum
 
 ## Configuration
 
-Edit `config.toml` to customize:
+Config file locations (searched in order):
+
+1. `~/.config/fellowship-recorder/config.toml` (recommended for installed users)
+2. `./config.toml` (project directory, for development)
+
+Edit your config to customize:
 
 **Essential settings:**
+
 - `log_directory` - Fellowship combat logs path
 - `monitor` - Display to record (find with `hyprctl monitors` or `xrandr`)
 
 **Recording settings:**
+
 - `resolution`, `quality`, `fps`, `format`
 - `audio_device` - Audio source to record (omit or set to `null` to disable audio)
 
 **Filters:**
+
 - `min_difficulty` - Only record dungeons above this difficulty (0 = all)
 - `record_quick_play` - Record Quick Play mode (default: false)
 
 **Timing:**
+
 - `dungeon_overrun` - Extra seconds after dungeon ends (default: 5)
 - `inactivity_timeout` - Stop after N seconds of no activity (default: 300)
 
 **Chapters:**
+
 - `boss_markers` - Add chapters for boss encounters
 - `death_markers` - Add chapters for player deaths
 - `chapter_offset` - Offset death markers backward in seconds
 
 See `config.toml.example` for complete documentation.
+
+## Desktop Entry
+
+To add Fellowship Recorder to your app launcher:
+
+```bash
+cp contrib/fellowship-recorder.desktop ~/.local/share/applications/
+```
 
 ## Troubleshooting
 

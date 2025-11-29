@@ -104,3 +104,25 @@ fps = 30           # Instead of 60
 format = "mkv"     # Better compression than mp4
 ```
 
+## TUI Dashboard
+
+**TUI not using my config**
+
+The TUI searches these locations in order:
+1. `~/.config/fellowship-recorder/config.toml`
+2. `./config.toml` (current directory)
+
+Copy your config to the XDG location:
+```bash
+mkdir -p ~/.config/fellowship-recorder
+cp config.toml ~/.config/fellowship-recorder/
+```
+
+**Log directory warning in TUI**
+
+The TUI shows "Log directory not found" if Fellowship isn't installed or the path is wrong. Check your config:
+```bash
+cat ~/.config/fellowship-recorder/config.toml | grep log_directory
+ls -la "$(cat ~/.config/fellowship-recorder/config.toml | grep log_directory | cut -d'"' -f2)"
+```
+

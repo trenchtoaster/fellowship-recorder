@@ -1,11 +1,19 @@
 [project]
 name = "fellowship-recorder"
-version = "0.3.1"
-description = "Automatic Fellowship activity recorder using gpu-screen-recorder"
+version = "0.4.0"
+description = "Automatic Fellowship dungeon recorder"
 readme = "README.md"
+license = "MIT"
 authors = [{ name = "trench", email = "trenchtoaster@gmail.com" }]
-dependencies = ["watchdog>=6.0.0", "pydantic>=2.0.0"]
+keywords = ["fellowship", "game", "recording", "screen-recorder", "linux"]
+classifiers = ["Operating System :: POSIX :: Linux"]
+dependencies = ["watchdog>=6.0.0", "pydantic>=2.0.0", "textual>=3.0.0"]
 requires-python = ">=3.12"
+
+[project.urls]
+Homepage = "https://github.com/trenchtoaster/fellowship-recorder"
+Repository = "https://github.com/trenchtoaster/fellowship-recorder"
+Issues = "https://github.com/trenchtoaster/fellowship-recorder/issues"
 
 [project.scripts]
 fellowship-recorder = "fellowship_recorder.__main__:main"
