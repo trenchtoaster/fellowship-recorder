@@ -96,7 +96,7 @@ def test_parse_dungeon_end(parser):
     assert event.metadata["dungeon_id"] == "23"
     assert event.metadata["difficulty_id"] == "31"
     assert event.metadata["affixes"] == "[6,4]"
-    assert event.metadata["mode"] == "1"
+    assert "mode" not in event.metadata
     assert event.metadata["duration"] == "972907"
     assert event.metadata["success"] == "1"
 

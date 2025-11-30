@@ -191,9 +191,6 @@ class CombatLogParser:
             if len(params) >= 4:
                 metadata["affixes"] = params[3]
 
-            if len(params) >= 5:
-                metadata["mode"] = params[4]
-
             if len(params) >= 6:
                 metadata["duration"] = params[5]
 
