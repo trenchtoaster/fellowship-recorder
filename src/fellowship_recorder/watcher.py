@@ -126,7 +126,7 @@ class CombatLogHandler(FileSystemEventHandler):
                 self.recorder.update_session_metadata(event)
                 if not self.config.should_record(event.metadata):
                     logger.info("Dungeon does not meet recording filters, stopping")
-                    self._stop_recording_with_event(None)
+                    self._stop_recording_with_event(None, discard=True)
             elif self.config.should_record(event.metadata):
                 logger.info("Starting recording for dungeon")
                 logger.info(f"Metadata: {event.metadata}")
@@ -164,7 +164,7 @@ class CombatLogHandler(FileSystemEventHandler):
             logger.info(
                 f"No activity for {self.config.inactivity_timeout}s, stopping recording"
             )
-            self._stop_recording_with_event(None)
+            self._stop_recording_with_event(None, discard=True)
 
     def check_pending_stop(self) -> None:
         """Stop recording when the configured overrun period has elapsed."""
@@ -175,15 +175,18 @@ class CombatLogHandler(FileSystemEventHandler):
             logger.info("Overrun period elapsed, stopping recording")
             self._stop_recording_with_event(self.pending_end_event)
 
-    def _stop_recording_with_event(self, end_event: CombatLogEvent | None) -> None:
+    def _stop_recording_with_event(
+        self, end_event: CombatLogEvent | None, discard: bool = False
+    ) -> None:
         """Stop the recorder and clear pending state.
 
         Args:
             end_event: The end event or None
+            discard: Delete the recording instead of saving it
         """
         if self.recorder.is_recording():
             logger.info("Stopping recording")
-            self.recorder.stop_recording(end_event)
+            self.recorder.stop_recording(end_event, discard=discard)
 
         self.pending_stop_time = None
         self.pending_end_event = None

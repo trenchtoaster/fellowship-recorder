@@ -200,7 +200,7 @@ class FellowshipRecorderConfig(BaseModel):
             logger.info("Skipping Quick Play mode (record_quick_play is disabled)")
             return False
 
-        difficulty_str = event_metadata.get("difficulty")
+        difficulty_str = event_metadata.get("difficulty_id")
         if difficulty_str:
             try:
                 difficulty = int(difficulty_str)

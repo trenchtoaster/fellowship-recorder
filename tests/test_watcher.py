@@ -119,7 +119,7 @@ class TestCombatLogHandler:
                 timestamp=datetime.now(timezone.utc),
                 event_type=EventType.DUNGEON_START,
                 raw_line="test",
-                metadata={"difficulty": "30"},
+                metadata={"difficulty_id": "30"},
             )
             mock_parse.return_value = mock_event
 
@@ -265,7 +265,7 @@ class TestCombatLogHandler:
                 timestamp=datetime.now(timezone.utc),
                 event_type=EventType.DUNGEON_START,
                 raw_line="test",
-                metadata={"difficulty": "30"},
+                metadata={"difficulty_id": "30"},
             )
             mock_parse.return_value = mock_event
 

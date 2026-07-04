@@ -507,6 +507,130 @@ def test_ffmpeg_metadata_result_failed(tmp_path):
     assert "RESULT=Failed" in content
 
 
+def _make_session(tmp_path, process=None):
+    """Build a session with a real temp file and a well-behaved mock process."""
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 27, 5),
+        event_type=EventType.DUNGEON_START,
+        raw_line="test",
+        metadata={
+            "dungeon_name": "Silken Hollow",
+            "dungeon_id": "24",
+            "difficulty_id": "31",
+        },
+    )
+
+    if process is None:
+        process = MagicMock()
+        process.communicate.return_value = (b"", b"")
+        process.returncode = 0
+
+    output_file = tmp_path / "recording_temp.mp4"
+    output_file.write_bytes(b"video")
+
+    return RecordingSession(
+        start_event=start_event,
+        process=process,
+        output_file=output_file,
+        start_time=start_event.timestamp.timestamp(),
+    )
+
+
+def test_stop_recording_discard_deletes_file(tmp_path):
+    """Test that discard=True removes the temp file and returns None."""
+    recorder = GpuScreenRecorder(output_dir=tmp_path, log_directory=tmp_path)
+    session = _make_session(tmp_path)
+    recorder.active_session = session
+
+    result = recorder.stop_recording(None, discard=True)
+
+    assert result is None
+    assert not session.output_file.exists()
+    assert recorder.active_session is None
+
+
+def test_stop_recording_without_end_event_saves_as_abandoned(tmp_path):
+    """Test that stopping without an end event saves the file instead of discarding."""
+    recorder = GpuScreenRecorder(output_dir=tmp_path, log_directory=tmp_path)
+    session = _make_session(tmp_path)
+    recorder.active_session = session
+
+    result = recorder.stop_recording()
+
+    assert result is not None
+    assert result.exists()
+    assert result.name.startswith("20251126_102705_Silken_Hollow")
+    assert not session.output_file.exists()
+
+    json_path = result.with_suffix(".json")
+    assert json_path.exists()
+
+    import json
+
+    data = json.loads(json_path.read_text())
+    assert data["completed"] is False
+    assert data["success"] is False
+
+
+def test_stop_recording_saves_after_kill_timeout(tmp_path):
+    """Test that the recording is still finalized when the process must be killed."""
+    import subprocess
+
+    process = MagicMock()
+    process.communicate.side_effect = subprocess.TimeoutExpired(cmd="gsr", timeout=10)
+
+    recorder = GpuScreenRecorder(output_dir=tmp_path, log_directory=tmp_path)
+    session = _make_session(tmp_path, process=process)
+    recorder.active_session = session
+
+    end_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 39, 14),
+        event_type=EventType.DUNGEON_END,
+        raw_line="test",
+        metadata={"success": "1", "duration": "605000"},
+    )
+
+    result = recorder.stop_recording(end_event)
+
+    process.kill.assert_called_once()
+    assert result is not None
+    assert result.exists()
+    assert result.name.startswith("20251126_102705_Silken_Hollow")
+    assert result.with_suffix(".json").exists()
+
+
+def test_duration_prefers_log_duration(tmp_path):
+    """Test that the game-reported duration wins over wall-clock time."""
+    start_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 27, 5),
+        event_type=EventType.DUNGEON_START,
+        raw_line="test",
+        metadata={"dungeon_name": "Test", "dungeon_id": "24", "difficulty_id": "31"},
+    )
+
+    end_event = CombatLogEvent(
+        timestamp=datetime(2025, 11, 26, 10, 37, 20),
+        event_type=EventType.DUNGEON_END,
+        raw_line="test",
+        metadata={"success": "1", "duration": "605000"},
+    )
+
+    recorder = GpuScreenRecorder(output_dir=tmp_path, log_directory=tmp_path)
+
+    session = RecordingSession(
+        start_event=start_event,
+        end_event=end_event,
+        process=MagicMock(),
+        output_file=tmp_path / "test.mp4",
+        start_time=start_event.timestamp.timestamp() - 20.0,
+    )
+
+    with patch.object(recorder.enricher, "enrich_metadata", side_effect=lambda m, s, e: m):
+        metadata = recorder._generate_metadata(session)
+
+    assert metadata.duration == 605.0
+
+
 def test_update_session_metadata_updates_timestamp(tmp_path):
     """Test that update_session_metadata updates both metadata and timestamp.
 

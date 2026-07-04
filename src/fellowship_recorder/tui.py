@@ -482,13 +482,26 @@ class FellowshipRecorderTUI(App):
         status.dungeon_name = self.current_metadata.get(
             "dungeon_name", "Unknown Dungeon"
         )
-        status.difficulty = self.current_metadata.get("difficulty", "")
+        status.difficulty = self._format_current_difficulty()
 
         self._log_event("[bold green]Recording started[/]")
 
-    def _stop_recording(self, event: CombatLogEvent | None) -> None:
+    def _format_current_difficulty(self) -> str:
+        """Format the current run's difficulty for the status panel."""
+        diff_id = self.current_metadata.get("difficulty_id")
+        mode = self.current_metadata.get("mode")
+        if not diff_id:
+            return ""
+        try:
+            return format_difficulty(int(diff_id), mode)
+        except (ValueError, TypeError):
+            return ""
+
+    def _stop_recording(
+        self, event: CombatLogEvent | None, discard: bool = False
+    ) -> None:
         """Stop recording."""
-        result = self.recorder.stop_recording(event)
+        result = self.recorder.stop_recording(event, discard=discard)
         self.recording_start_time = None
 
         status = self.query_one(StatusIndicator)
@@ -521,7 +534,7 @@ class FellowshipRecorderTUI(App):
             self._log_event(
                 f"[yellow]Inactivity timeout ({self.config.inactivity_timeout}s)[/]"
             )
-            self._stop_recording(None)
+            self._stop_recording(None, discard=True)
 
     def _log_event(self, message: str) -> None:
         """Add a message to the event log."""
@@ -632,12 +645,12 @@ class FellowshipRecorderTUI(App):
             self._log_event("[yellow]No files to delete[/]")
 
     def action_quit_app(self) -> None:
-        """Stop recording and quit."""
+        """Stop recording and quit, saving any in-progress recording."""
         if self._observer:
             self._observer.stop()
 
         if self.recorder.is_recording():
-            self.recorder.stop_recording(None)
+            self.recorder.stop_recording()
 
         self.exit()
 

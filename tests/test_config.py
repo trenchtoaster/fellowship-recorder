@@ -18,19 +18,19 @@ class TestFellowshipRecorderConfig:
     def test_should_record_above_difficulty_threshold(self):
         """Test dungeon recording above difficulty threshold."""
         config = FellowshipRecorderConfig(min_difficulty=10)
-        metadata = {"difficulty": "15"}
+        metadata = {"difficulty_id": "15"}
         assert config.should_record(metadata)
 
     def test_should_record_below_difficulty_threshold(self):
         """Test dungeon recording below difficulty threshold."""
         config = FellowshipRecorderConfig(min_difficulty=10)
-        metadata = {"difficulty": "5"}
+        metadata = {"difficulty_id": "5"}
         assert not config.should_record(metadata)
 
     def test_should_record_at_difficulty_threshold(self):
         """Test dungeon recording exactly at difficulty threshold."""
         config = FellowshipRecorderConfig(min_difficulty=10)
-        metadata = {"difficulty": "10"}
+        metadata = {"difficulty_id": "10"}
         assert config.should_record(metadata)
 
     def test_should_record_no_metadata(self):
@@ -41,7 +41,7 @@ class TestFellowshipRecorderConfig:
     def test_should_record_invalid_difficulty(self):
         """Test recording with invalid difficulty value."""
         config = FellowshipRecorderConfig(min_difficulty=10)
-        metadata = {"difficulty": "invalid"}
+        metadata = {"difficulty_id": "invalid"}
         assert config.should_record(metadata)
 
     def test_get_overrun_time(self):

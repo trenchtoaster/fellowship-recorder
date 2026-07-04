@@ -210,14 +210,17 @@ class GpuScreenRecorder:
             logger.error(f"Error starting recording: {e}")
             return None
 
-    def stop_recording(self, end_event: CombatLogEvent | None = None) -> Path | None:
+    def stop_recording(
+        self, end_event: CombatLogEvent | None = None, discard: bool = False
+    ) -> Path | None:
         """Stop the current recording session.
 
         Args:
-            end_event: The end event, or None to cancel and discard the recording
+            end_event: The end event, or None if the run was interrupted
+            discard: Delete the recording instead of saving it
 
         Returns:
-            Path to the final recording file, or None if cancelled/no session active
+            Path to the final recording file, or None if discarded/no session active
         """
         if self.active_session is None:
             logger.warning("No active recording to stop")
@@ -227,6 +230,16 @@ class GpuScreenRecorder:
         session.end_event = end_event
         self.active_session = None
 
+        self._terminate_process(session)
+
+        try:
+            return self._finalize_recording(session, discard)
+        except Exception as e:
+            logger.error(f"Error stopping recording: {e}")
+            return session.output_file
+
+    def _terminate_process(self, session: RecordingSession) -> None:
+        """Stop the recorder process, killing it if it won't terminate in time."""
         try:
             session.process.terminate()
             stdout, stderr = session.process.communicate(timeout=10)
@@ -236,49 +249,51 @@ class GpuScreenRecorder:
                 if stderr:
                     logger.error(f"stderr: {stderr.decode()}")
 
-            if not session.output_file.exists():
-                logger.warning(f"Output file does not exist: {session.output_file}")
-                return None
-
-            if end_event is None:
-                logger.info("Recording cancelled, discarding file")
-                session.output_file.unlink(missing_ok=True)
-                return None
-
-            final_name = session.get_filename()
-            final_path = self.output_dir / final_name
-
-            counter = 1
-            while final_path.exists():
-                name_parts = final_name.rsplit(".", 1)
-                final_name = f"{name_parts[0]}_{counter}.{name_parts[1]}"
-                final_path = self.output_dir / final_name
-                counter += 1
-
-            session.output_file.rename(final_path)
-            logger.info(f"Recording saved: {final_path}")
-
-            metadata = self._generate_metadata(session)
-
-            if self.add_chapters and metadata.chapters:
-                final_path = self._add_chapters_to_video(session, final_path, metadata)
-
-            self._save_metadata(metadata, final_path)
-
-            if self.generate_video_description:
-                self._save_video_description(metadata, final_path)
-
-            return final_path
-
         except subprocess.TimeoutExpired:
             logger.warning("Process did not stop gracefully, killing...")
             session.process.kill()
             session.process.wait()
-            return session.output_file
 
         except Exception as e:
-            logger.error(f"Error stopping recording: {e}")
-            return session.output_file
+            logger.error(f"Error stopping recorder process: {e}")
+
+    def _finalize_recording(
+        self, session: RecordingSession, discard: bool
+    ) -> Path | None:
+        """Rename the temp file and write metadata, or discard it."""
+        if not session.output_file.exists():
+            logger.warning(f"Output file does not exist: {session.output_file}")
+            return None
+
+        if discard:
+            logger.info("Recording cancelled, discarding file")
+            session.output_file.unlink(missing_ok=True)
+            return None
+
+        final_name = session.get_filename()
+        final_path = self.output_dir / final_name
+
+        counter = 1
+        while final_path.exists():
+            name_parts = final_name.rsplit(".", 1)
+            final_name = f"{name_parts[0]}_{counter}.{name_parts[1]}"
+            final_path = self.output_dir / final_name
+            counter += 1
+
+        session.output_file.rename(final_path)
+        logger.info(f"Recording saved: {final_path}")
+
+        metadata = self._generate_metadata(session)
+
+        if self.add_chapters and metadata.chapters:
+            final_path = self._add_chapters_to_video(session, final_path, metadata)
+
+        self._save_metadata(metadata, final_path)
+
+        if self.generate_video_description:
+            self._save_video_description(metadata, final_path)
+
+        return final_path
 
     def update_session_metadata(self, event: CombatLogEvent) -> None:
         """Update the active session's start event metadata.
@@ -447,11 +462,7 @@ class GpuScreenRecorder:
                 except ValueError:
                     log_duration = None
 
-        duration = (
-            max(measured_duration, log_duration)
-            if log_duration is not None
-            else measured_duration
-        )
+        duration = log_duration if log_duration is not None else measured_duration
 
         completed, success = self._parse_result(session)
 
@@ -574,7 +585,7 @@ class GpuScreenRecorder:
             return (False, False)
 
         if end_event is None:
-            return (True, True)
+            return (False, False)
 
         if session.start_event and session.start_event.timestamp == end_event.timestamp:
             return (False, False)
