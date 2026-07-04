@@ -133,7 +133,7 @@ class TestGenerateVideoDescription:
         description = generate_video_description(metadata)
 
         assert "Affixes:" in description
-        assert "Asha's Dilemma" not in description
+        assert "Asha's Regret" not in description
         assert "Vayr's Legacy" not in description
         assert "Blood Shards" in description
         assert "Binding Ice" in description
@@ -173,7 +173,7 @@ class TestGenerateVideoDescription:
         assert "Elarion" in description
         assert "Affixes:" in description
         assert "Blood Shards" in description
-        assert "Asha's Dilemma" not in description
+        assert "Asha's Regret" not in description
 
     def test_description_empty_metadata(self):
         """Test description with minimal metadata."""

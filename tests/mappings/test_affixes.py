@@ -14,7 +14,9 @@ class TestGetAffixName:
     def test_get_known_affix_name(self):
         """Test getting name for a known affix."""
         assert get_affix_name(4) == "Vayr's Legacy"
-        assert get_affix_name(6) == "Asha's Dilemma"
+        assert get_affix_name(5) == "Asha's Dilemma"
+        assert get_affix_name(6) == "Asha's Regret"
+        assert get_affix_name(27) == "Truesight"
         assert get_affix_name(8) == "Blood Shards"
         assert get_affix_name(19) == "Shadow Lord's Trial"
 
@@ -58,7 +60,7 @@ class TestGetAffixNames:
     def test_get_multiple_affix_names(self):
         """Test getting names for multiple affixes."""
         names = get_affix_names([6, 4, 8])
-        assert names == ["Asha's Dilemma", "Vayr's Legacy", "Blood Shards"]
+        assert names == ["Asha's Regret", "Vayr's Legacy", "Blood Shards"]
 
     def test_get_empty_list(self):
         """Test getting names for empty list."""
@@ -67,7 +69,7 @@ class TestGetAffixNames:
     def test_get_mixed_known_unknown(self):
         """Test getting names with some unknown IDs."""
         names = get_affix_names([6, 999, 4])
-        assert names == ["Asha's Dilemma", "Vayr's Legacy"]
+        assert names == ["Asha's Regret", "Vayr's Legacy"]
 
     def test_get_all_unknown(self):
         """Test getting names for all unknown IDs."""
@@ -80,12 +82,12 @@ class TestAffixMap:
 
     def test_affix_map_contains_expected_affixes(self):
         """Test that AFFIX_MAP contains expected affix IDs."""
-        expected_ids = [4, 6, 8, 9, 11, 12, 13, 14, 15, 16, 19]
+        expected_ids = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25, 27]
         for affix_id in expected_ids:
             assert affix_id in AFFIX_MAP
 
     def test_affix_types(self):
         """Test that affixes have valid types."""
-        valid_types = {"Ascension", "Curse"}
+        valid_types = {"Ascension", "Curse", "Implicit"}
         for info in AFFIX_MAP.values():
             assert info["type"] in valid_types

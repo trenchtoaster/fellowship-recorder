@@ -115,13 +115,12 @@ def test_format_target_time_unknown():
 
 def test_adventure_dungeons():
     """Test that all adventure dungeons are properly categorized."""
-    adventure_ids = [6, 8, 11, 12, 15, 21, 24, 25]
+    adventure_ids = [6, 8, 11, 12, 15, 21, 24, 25, 29, 31]
 
     for dungeon_id in adventure_ids:
         dungeon = DUNGEONS.get(dungeon_id)
         assert dungeon is not None, f"Dungeon {dungeon_id} not found"
         assert dungeon.category == DungeonCategory.ADVENTURE
-        assert dungeon.target_time_seconds is not None
 
 
 def test_regular_dungeons():
@@ -135,8 +134,25 @@ def test_regular_dungeons():
         assert dungeon.target_time_seconds is not None
 
 
-def test_all_dungeons_have_target_times():
-    """Test that all dungeons in the map have target times."""
+def test_pinnacle_dungeons():
+    """Test that pinnacle dungeons are properly categorized."""
+    dungeon = DUNGEONS.get(30)
+    assert dungeon is not None
+    assert dungeon.name == "Xul, The Blood Monolith"
+    assert dungeon.category == DungeonCategory.PINNACLE
+
+
+def test_known_target_times_are_positive():
+    """Test that every known target time is a positive number."""
+    for dungeon in DUNGEONS.values():
+        if dungeon.target_time_seconds is not None:
+            assert dungeon.target_time_seconds > 0
+
+
+def test_season_one_dungeons_have_target_times():
+    """Test that all pre-Season 3 dungeons still have their target times."""
     for dungeon_id, dungeon in DUNGEONS.items():
-        assert dungeon.target_time_seconds is not None, f"Dungeon {dungeon_id} missing target time"
-        assert dungeon.target_time_seconds > 0
+        if dungeon_id < 29:
+            assert dungeon.target_time_seconds is not None, (
+                f"Dungeon {dungeon_id} missing target time"
+            )

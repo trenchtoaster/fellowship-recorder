@@ -201,7 +201,7 @@ def test_metadata_affixes(tmp_path):
     assert len(metadata.affixes) == 4
 
     assert metadata.affixes[0].affix_id == 6
-    assert metadata.affixes[0].affix_name == "Asha's Dilemma"
+    assert metadata.affixes[0].affix_name == "Asha's Regret"
     assert metadata.affixes[1].affix_id == 4
     assert metadata.affixes[1].affix_name == "Vayr's Legacy"
     assert metadata.affixes[2].affix_id == 8
@@ -218,7 +218,7 @@ def test_metadata_affixes(tmp_path):
     assert "affixes" in data
     assert len(data["affixes"]) == 4
     assert data["affixes"][0]["affix_id"] == 6
-    assert data["affixes"][0]["affix_name"] == "Asha's Dilemma"
+    assert data["affixes"][0]["affix_name"] == "Asha's Regret"
 
 
 def test_generate_chapters():

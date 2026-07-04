@@ -18,6 +18,12 @@ class TestGetHeroName:
         assert get_hero_name(20) == "Vigour"
         assert get_hero_name(22) == "Helena"
 
+    def test_get_season_two_and_three_heroes(self):
+        """Test heroes added in Seasons 2 and 3."""
+        assert get_hero_name(9) == "Gunde"
+        assert get_hero_name(24) == "Aeona"
+        assert get_hero_name(25) == "Xavian"
+
     def test_get_unknown_hero_name(self):
         """Test getting name for unknown hero."""
         assert get_hero_name(999) == "Unknown"
@@ -34,7 +40,7 @@ class TestHeroMap:
 
     def test_hero_map_contains_expected_heroes(self):
         """Test that HERO_ID_MAP contains expected hero IDs."""
-        expected_ids = [2, 7, 10, 11, 13, 14, 17, 20, 22]
+        expected_ids = [2, 7, 9, 10, 11, 13, 14, 17, 20, 22, 24, 25]
         for hero_id in expected_ids:
             assert hero_id in HERO_ID_MAP
 

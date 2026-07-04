@@ -5,6 +5,7 @@ from __future__ import annotations
 HERO_ID_MAP: dict[int, str] = {
     2: "Elarion",
     7: "Ardeos",
+    9: "Gunde",
     10: "Tariq",
     11: "Mara",
     13: "Meiko",
@@ -12,6 +13,8 @@ HERO_ID_MAP: dict[int, str] = {
     17: "Rime",
     20: "Vigour",
     22: "Helena",
+    24: "Aeona",
+    25: "Xavian",
 }
 
 

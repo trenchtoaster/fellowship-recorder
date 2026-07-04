@@ -13,10 +13,12 @@ class DungeonCategory(str, Enum):
     Dungeons are categorized into:
     - Adventures: Shorter instances (~10-15 minutes)
     - Dungeons: Capstone dungeons with multiple bosses (~25-30 minutes)
+    - Pinnacle: Weekly high-end challenge dungeons (added in Season 3)
     """
 
     ADVENTURE = "Adventure"
     DUNGEON = "Dungeon"
+    PINNACLE = "Pinnacle"
 
 
 class DungeonInfo(BaseModel):
@@ -97,6 +99,18 @@ DUNGEONS: dict[int, DungeonInfo] = {
         category=DungeonCategory.ADVENTURE,
         target_time_seconds=738,
     ),
+    29: DungeonInfo(
+        dungeon_id=29,
+        name="Ruins of Regath",
+        category=DungeonCategory.ADVENTURE,
+        target_time_seconds=900,
+    ),
+    31: DungeonInfo(
+        dungeon_id=31,
+        name="Scryer's Peak",
+        category=DungeonCategory.ADVENTURE,
+        target_time_seconds=807,
+    ),
     5: DungeonInfo(
         dungeon_id=5,
         name="The Heart of Tuzari",
@@ -120,6 +134,12 @@ DUNGEONS: dict[int, DungeonInfo] = {
         name="Ransack of Drakheim",
         category=DungeonCategory.DUNGEON,
         target_time_seconds=1740,
+    ),
+    30: DungeonInfo(
+        dungeon_id=30,
+        name="Xul, The Blood Monolith",
+        category=DungeonCategory.PINNACLE,
+        target_time_seconds=1700,
     ),
 }
 
