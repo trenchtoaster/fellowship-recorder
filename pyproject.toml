@@ -8,7 +8,7 @@ authors = [{ name = "trench", email = "trenchtoaster@gmail.com" }]
 keywords = ["fellowship", "game", "recording", "screen-recorder", "linux"]
 classifiers = ["Operating System :: POSIX :: Linux"]
 dependencies = ["watchdog>=6.0.0", "pydantic>=2.0.0", "textual>=3.0.0"]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 
 [project.urls]
 Homepage = "https://github.com/trenchtoaster/fellowship-recorder"
@@ -31,7 +31,12 @@ python = "3.14"
 cache-dir = "./.uv_cache"
 
 [dependency-groups]
-dev = ["pytest", "pytest-cov", "ruff", "basedpyright"]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "ty>=0.0.56",
+]
 
 [tool.setuptools]
 package-dir = { "fellowship_recorder" = "src/fellowship_recorder" }
@@ -62,13 +67,5 @@ ignore = [
 [tool.ruff.format]
 quote-style = "double"
 
-[tool.basedpyright]
-typeCheckingMode = "basic"
-venv = ".venv"
-venvPath = "."
-exclude = ["tests"]
-reportMissingTypeStubs = "warning"
-reportUnknownParameterType = "error"
-reportUnknownArgumentType = "none"
-reportUnknownVariableType = "none"
-reportUnknownMemberType = "none"
+[tool.ty.src]
+include = ["src"]

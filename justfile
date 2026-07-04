@@ -33,7 +33,7 @@ typecheck: install-uv
     @echo "-----------------------------------"
     @echo "- Running type checker -"
     @echo "-----------------------------------"
-    PYTHONPATH=src uv run python -m basedpyright src
+    uv run ty check
 
 test: install-uv
     @echo "-----------------------------------"
