@@ -241,7 +241,7 @@ class MetadataEnricher:
             List of encounters
         """
         encounters = []
-        encounter_starts = {}
+        encounter_starts: dict[int, tuple[str, float]] = {}
 
         with log_file.open("r", encoding="utf-8", errors="ignore") as f:
             for line in f:
@@ -268,28 +268,23 @@ class MetadataEnricher:
 
                     if event_type == "ENCOUNTER_START":
                         start_offset = (timestamp - start_time).total_seconds()
-                        encounter_starts[boss_id] = {
-                            "boss_name": boss_name,
-                            "start_timestamp": start_offset,
-                            "start_time": timestamp,
-                        }
+                        encounter_starts[boss_id] = (boss_name, start_offset)
 
                     elif event_type == "ENCOUNTER_END":
                         end_offset = (timestamp - start_time).total_seconds()
                         success = bool(int(parts[4])) if len(parts) > 4 else None
 
-                        start_data = encounter_starts.get(boss_id)
+                        start_data = encounter_starts.pop(boss_id, None)
                         if start_data:
                             encounters.append(
                                 Encounter(
                                     boss_id=boss_id,
                                     boss_name=boss_name,
-                                    start_time_offset=start_data["start_timestamp"],
+                                    start_time_offset=start_data[1],
                                     end_time_offset=end_offset,
                                     success=success,
                                 )
                             )
-                            del encounter_starts[boss_id]
                         else:
                             encounters.append(
                                 Encounter(
@@ -304,12 +299,12 @@ class MetadataEnricher:
                 except Exception:
                     continue
 
-        for boss_id, data in encounter_starts.items():
+        for boss_id, (unfinished_name, unfinished_offset) in encounter_starts.items():
             encounters.append(
                 Encounter(
                     boss_id=boss_id,
-                    boss_name=data["boss_name"],
-                    start_time_offset=data["start_timestamp"],
+                    boss_name=unfinished_name,
+                    start_time_offset=unfinished_offset,
                     end_time_offset=None,
                     success=None,
                 )

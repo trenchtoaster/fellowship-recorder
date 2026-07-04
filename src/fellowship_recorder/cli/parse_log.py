@@ -9,7 +9,7 @@ from pathlib import Path
 from ..config import FellowshipRecorderConfig
 from ..enrichment import MetadataEnricher
 from ..metadata import RecordingMetadata
-from ..parser import CombatLogParser, EventType
+from ..parser import CombatLogEvent, CombatLogParser, EventType
 from ..recorder import sanitize_filename
 
 
@@ -28,7 +28,7 @@ def parse_combat_log(
     parser = CombatLogParser()
     enricher = MetadataEnricher(log_file.parent)
     runs: list[RecordingMetadata] = []
-    current_run = None
+    start_event: CombatLogEvent | None = None
 
     with log_file.open("r", encoding="utf-8", errors="ignore") as f:
         for line in f:
@@ -37,21 +37,16 @@ def parse_combat_log(
                 continue
 
             if event.is_start_event:
-                if current_run is None:
-                    current_run = {
-                        "start_event": event,
-                        "start_time": event.timestamp,
-                    }
+                if start_event is None:
+                    start_event = event
                 elif event.event_type == EventType.DUNGEON_START:
-                    current_dungeon = current_run["start_event"].metadata.get(
-                        "dungeon_id"
-                    )
+                    current_dungeon = start_event.metadata.get("dungeon_id")
                     new_dungeon = event.metadata.get("dungeon_id")
                     if current_dungeon == new_dungeon:
-                        current_run["start_event"] = event
-                        current_run["start_time"] = event.timestamp
+                        start_event = event
 
-            elif event.is_end_event and current_run:
+            elif event.is_end_event and start_event:
+                start_time = start_event.timestamp
                 end_event = event
                 end_time = event.timestamp
 
@@ -59,7 +54,7 @@ def parse_combat_log(
                 duration = (
                     float(duration_str) / 1000.0
                     if duration_str
-                    else (end_time - current_run["start_time"]).total_seconds()
+                    else (end_time - start_time).total_seconds()
                 )
 
                 success_str = end_event.metadata.get("success", "0")
@@ -68,43 +63,32 @@ def parse_combat_log(
                 completed = end_event.event_type == EventType.DUNGEON_END
 
                 metadata = RecordingMetadata.from_dungeon(
-                    dungeon_name=current_run["start_event"].metadata.get(
-                        "dungeon_name", "Unknown"
-                    ),
-                    dungeon_id=int(
-                        current_run["start_event"].metadata.get("dungeon_id", 0)
-                    ),
-                    difficulty_id=int(
-                        current_run["start_event"].metadata.get("difficulty_id", 0)
-                    ),
+                    dungeon_name=start_event.metadata.get("dungeon_name", "Unknown"),
+                    dungeon_id=int(start_event.metadata.get("dungeon_id", 0)),
+                    difficulty_id=int(start_event.metadata.get("difficulty_id", 0)),
                     duration=duration,
                     completed=completed,
                     success=success,
-                    start_time=current_run["start_time"],
+                    start_time=start_time,
                     end_time=end_time,
-                    mode_id=current_run["start_event"].metadata.get("mode"),
+                    mode_id=start_event.metadata.get("mode"),
                     affixes=[
                         int(x)
-                        for x in current_run["start_event"]
-                        .metadata.get("affixes", "")
+                        for x in start_event.metadata.get("affixes", "")
                         .strip("[]")
                         .split(",")
                         if x.strip()
                     ],
                 )
 
-                metadata = enricher.enrich_metadata(
-                    metadata,
-                    current_run["start_time"],
-                    end_time,
-                )
+                metadata = enricher.enrich_metadata(metadata, start_time, end_time)
 
                 chapters = metadata.generate_chapters()
                 if chapters:
                     metadata.chapters = chapters
 
                 runs.append(metadata)
-                current_run = None
+                start_event = None
 
     if output_file and len(runs) == 1:
         runs[0].to_json(output_file)
