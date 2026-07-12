@@ -1,6 +1,6 @@
 [project]
 name = "fellowship-recorder"
-version = "0.5.0"
+version = "0.6.0"
 description = "Automatic Fellowship dungeon recorder"
 readme = "README.md"
 license = "MIT"
@@ -21,7 +21,7 @@ parse-log = "fellowship_recorder.cli.parse_log:main"
 generate-description = "fellowship_recorder.cli.generate_description:main"
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv.pip]
